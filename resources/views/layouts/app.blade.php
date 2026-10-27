@@ -721,7 +721,7 @@
             </header>
 
             <!-- ================================================
-                 3. MAIN CONTENT (@yield('content'))
+                 3. MAIN CONTENT
                  ================================================ -->
             <main class="content-container">
                 @if(session('success'))

@@ -31,7 +31,7 @@ class MasterController extends Controller
 
     public function item()
     {
-        $data = MItem::with(['satuan.satuanDasar'])->orderBy('id')->get();
+        $data = MItem::with(['satuan.satuanDasar'])->orderBy('id_barang')->get();
         $satuanList = MSatuan::orderBy('kode_satuan')->get();
         return view('master.item', compact('data', 'satuanList'));
     }

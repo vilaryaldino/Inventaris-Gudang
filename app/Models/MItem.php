@@ -9,11 +9,16 @@ class MItem extends Model
 {
     protected $table = 'm_item';
 
-    protected $primaryKey = 'id';
+    /**
+     * Primary Key tabel m_item menggunakan id_barang
+     * agar berelasi langsung dengan gd_terima_beli_d.id_barang.
+     */
+    protected $primaryKey = 'id_barang';
 
     public $sequence = 'm_item_id_seq';
 
     protected $fillable = [
+        'id_barang',
         'kode_barang',
         'nama_barang',
         'id_satuan',
@@ -21,8 +26,17 @@ class MItem extends Model
     ];
 
     protected $casts = [
+        'id_barang' => 'integer',
         'harga_satuan' => 'decimal:2',
     ];
+
+    /**
+     * Helper accessor untuk backward compatibility jika properti ->id dipanggil.
+     */
+    public function getIdAttribute()
+    {
+        return $this->attributes['id_barang'] ?? null;
+    }
 
     /**
      * Relasi ke Master Satuan.

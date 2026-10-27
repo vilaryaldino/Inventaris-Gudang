@@ -17,7 +17,7 @@ class DashboardController extends Controller
         $totalRekanan = MRekanan::count();
         $totalSatuanDasar = MSatuanDasar::count();
 
-        $recentItems = MItem::with('satuan')->latest('id')->take(5)->get();
+        $recentItems = MItem::with('satuan')->latest('id_barang')->take(5)->get();
         $rekanans = MRekanan::latest('id')->take(5)->get();
 
         return view('dashboard', compact(
