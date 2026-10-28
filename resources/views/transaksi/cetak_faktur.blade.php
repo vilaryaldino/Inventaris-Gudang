@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cetak Faktur Penerimaan - {{ $trx->no_transaksi }}</title>
+    
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
         * {
             box-sizing: border-box;
@@ -19,14 +22,17 @@
             color: #1e293b;
             background-color: #f1f5f9;
             padding: 30px;
+            line-height: 1.5;
         }
         .invoice-box {
-            max-width: 850px;
+            max-width: 880px;
             margin: auto;
             background: #ffffff;
-            padding: 36px 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border: 1px solid #e2e8f0;
+            position: relative;
         }
         .header {
             display: flex;
@@ -56,17 +62,19 @@
             color: #2563eb;
             font-weight: 800;
             text-transform: uppercase;
+            letter-spacing: -0.02em;
         }
         .invoice-title .badge {
             display: inline-block;
             background: #eff6ff;
             color: #1d4ed8;
             border: 1px solid #bfdbfe;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-weight: 800;
             margin-top: 6px;
-            font-size: 13px;
+            font-size: 13.5px;
+            font-family: ui-monospace, SFMono-Regular, monospace;
         }
         .meta-grid {
             display: grid;
@@ -74,12 +82,12 @@
             gap: 24px;
             margin-bottom: 24px;
             background: #f8fafc;
-            padding: 16px 20px;
-            border-radius: 6px;
+            padding: 18px 22px;
+            border-radius: 8px;
             border: 1px solid #e2e8f0;
         }
         .meta-col p {
-            margin-bottom: 6px;
+            margin-bottom: 7px;
             display: flex;
         }
         .meta-col p:last-child {
@@ -89,11 +97,13 @@
             width: 140px;
             color: #64748b;
             font-weight: 500;
+            font-size: 12.5px;
         }
         .meta-value {
             flex: 1;
             font-weight: 600;
             color: #0f172a;
+            font-size: 12.5px;
         }
         table {
             width: 100%;
@@ -101,38 +111,44 @@
             margin-bottom: 24px;
         }
         th {
-            background-color: #f1f5f9;
+            background-color: #f8fafc;
             color: #475569;
             text-align: left;
-            padding: 10px 12px;
-            font-size: 12px;
+            padding: 11px 14px;
+            font-size: 11.5px;
             font-weight: 700;
             text-transform: uppercase;
+            letter-spacing: 0.04em;
             border-bottom: 2px solid #cbd5e1;
         }
         td {
-            padding: 10px 12px;
+            padding: 11px 14px;
             border-bottom: 1px solid #e2e8f0;
-            font-size: 12px;
+            font-size: 12.5px;
+            color: #1e293b;
         }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
+        .font-bold { font-weight: 700; }
         .total-row td {
             font-weight: 800;
-            font-size: 14px;
+            font-size: 13.5px;
             color: #0f172a;
             border-top: 2px solid #cbd5e1;
             background: #f8fafc;
+            padding: 12px 14px;
         }
         .signatures {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 20px;
-            margin-top: 40px;
+            margin-top: 36px;
             text-align: center;
         }
-        .sign-box {
-            padding-top: 10px;
+        .sign-box p {
+            font-size: 12.5px;
+            color: #475569;
+            font-weight: 600;
         }
         .sign-space {
             height: 70px;
@@ -141,26 +157,46 @@
             font-weight: 700;
             border-top: 1px solid #94a3b8;
             display: inline-block;
-            min-width: 160px;
+            min-width: 170px;
             padding-top: 6px;
+            font-size: 12.5px;
+            color: #0f172a;
         }
         .no-print {
-            margin-bottom: 20px;
-            text-align: right;
+            max-width: 880px;
+            margin: 0 auto 16px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .btn {
-            background: #2563eb;
+        .btn-print {
+            background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
             color: #ffffff;
-            border: none;
+            border: 1px solid #1d4ed8;
+            padding: 9px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+            transition: all 0.2s;
+        }
+        .btn-print:hover {
+            background: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%);
+        }
+        .btn-close {
+            background: #ffffff;
+            color: #475569;
+            border: 1px solid #cbd5e1;
             padding: 9px 18px;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
             font-size: 13px;
         }
-        .btn-secondary {
-            background: #64748b;
-            margin-left: 8px;
+        .btn-close:hover {
+            background: #f8fafc;
+            color: #0f172a;
         }
         @media print {
             body {
@@ -169,22 +205,28 @@
             }
             .invoice-box {
                 box-shadow: none;
+                border: none;
                 padding: 0;
             }
             .no-print {
-                display: none;
+                display: none !important;
             }
         }
     </style>
 </head>
 <body>
 
-    <div class="invoice-box">
-        <div class="no-print">
-            <button class="btn" onclick="window.print()">🖨️ Cetak Dokumen</button>
-            <button class="btn btn-secondary" onclick="window.close()">Tutup</button>
+    <div class="no-print">
+        <span style="font-size: 13px; color: #64748b; font-weight: 500;">
+            Dokumen Cetak Faktur Penerimaan Gudang &middot; Oracle 11g Verified
+        </span>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn-print" onclick="window.print()">🖨️ Cetak Dokumen</button>
+            <button class="btn-close" onclick="window.close()">Tutup</button>
         </div>
+    </div>
 
+    <div class="invoice-box">
         <div class="header">
             <div class="company-info">
                 <h1>PT. LOGISTIK WAREHOUSE INDONESIA</h1>
@@ -214,7 +256,7 @@
 
         @if($trx->keterangan)
         <div style="margin-bottom: 20px; font-size: 12px; color: #475569; background: #fffbeb; border: 1px solid #fef3c7; padding: 10px 14px; border-radius: 6px;">
-            <strong>Catatan:</strong> {{ $trx->keterangan }}
+            <strong>Catatan Transaksi:</strong> {{ $trx->keterangan }}
         </div>
         @endif
 
@@ -222,20 +264,20 @@
             <thead>
                 <tr>
                     <th class="text-center" style="width: 40px;">No</th>
-                    <th style="width: 100px;">Kode Barang</th>
+                    <th style="width: 110px;">Kode Barang</th>
                     <th>Nama Barang</th>
                     <th class="text-center" style="width: 90px;">Satuan</th>
                     <th class="text-right" style="width: 80px;">Jumlah</th>
-                    <th class="text-right" style="width: 120px;">Harga Satuan</th>
+                    <th class="text-right" style="width: 130px;">Harga Satuan</th>
                     <th class="text-right" style="width: 140px;">Subtotal (Rp)</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($trx->details as $d)
                 <tr>
-                    <td class="text-center">{{ $d->no_urut }}</td>
-                    <td><strong>{{ $d->barang ? $d->barang->kode_barang : "BRG-{$d->id_barang}" }}</strong></td>
-                    <td>{{ $d->barang ? $d->barang->nama_barang : "Barang ID {$d->id_barang}" }}</td>
+                    <td class="text-center" style="color: #64748b;">{{ $d->no_urut }}</td>
+                    <td><strong style="color: #1e40af; font-family: ui-monospace, monospace;">{{ $d->barang ? $d->barang->kode_barang : "BRG-{$d->id_barang}" }}</strong></td>
+                    <td><strong>{{ $d->barang ? $d->barang->nama_barang : "Barang ID {$d->id_barang}" }}</strong></td>
                     <td class="text-center">{{ $d->satuan ? $d->satuan->nama_satuan : "Satuan {$d->id_satuan}" }}</td>
                     <td class="text-right">{{ number_format($d->jumlah, 2, ',', '.') }}</td>
                     <td class="text-right">{{ $d->barang ? number_format($d->barang->harga_satuan, 0, ',', '.') : '-' }}</td>
@@ -243,21 +285,21 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center" style="color: #94a3b8; padding: 20px;">Tidak ada rincian barang.</td>
+                    <td colspan="7" class="text-center" style="color: #94a3b8; padding: 24px;">Tidak ada rincian barang.</td>
                 </tr>
                 @endforelse
                 <tr class="total-row">
                     <td colspan="4" class="text-right">GRAND TOTAL</td>
                     <td class="text-right">{{ number_format($trx->total_kuantitas, 2, ',', '.') }}</td>
                     <td></td>
-                    <td class="text-right">Rp {{ number_format($trx->total_nilai, 0, ',', '.') }}</td>
+                    <td class="text-right" style="color: #2563eb;">Rp {{ number_format($trx->total_nilai, 0, ',', '.') }}</td>
                 </tr>
             </tbody>
         </table>
 
         <div class="signatures">
             <div class="sign-box">
-                <p>Pengirim / Kurir</p>
+                <p>Pengirim / Kurir Vendor</p>
                 <div class="sign-space"></div>
                 <span class="sign-name">( ........................................ )</span>
             </div>

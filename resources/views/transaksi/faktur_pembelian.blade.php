@@ -103,49 +103,56 @@
     /* Tab Switcher */
     .nav-tabs-custom {
         display: flex;
-        gap: 8px;
-        border-bottom: 2px solid #e2e8f0;
+        gap: 10px;
+        border-bottom: 1px solid var(--border-color);
         margin-bottom: 24px;
+        padding-bottom: 12px;
+        flex-wrap: wrap;
     }
 
     .tab-btn {
-        background: transparent;
-        border: none;
-        padding: 12px 20px;
-        font-size: 14px;
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        padding: 10px 20px;
+        font-size: 13.5px;
         font-weight: 600;
         color: #64748b;
         cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 8px;
-        border-bottom: 3px solid transparent;
-        margin-bottom: -2px;
-        transition: all 0.2s ease;
+        gap: 10px;
+        border-radius: 9999px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     }
 
     .tab-btn:hover {
         color: #2563eb;
+        border-color: #bfdbfe;
+        background: #eff6ff;
+        transform: translateY(-1px);
     }
 
     .tab-btn.active {
-        color: #2563eb;
-        border-bottom-color: #2563eb;
+        color: #ffffff;
+        background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+        border-color: #1d4ed8;
         font-weight: 700;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
     }
 
     .tab-badge {
         background: #f1f5f9;
         color: #475569;
         font-size: 11px;
-        padding: 2px 8px;
-        border-radius: 10px;
+        padding: 3px 8px;
+        border-radius: 9999px;
         font-weight: 700;
     }
 
     .tab-btn.active .tab-badge {
-        background: #eff6ff;
-        color: #2563eb;
+        background: rgba(255, 255, 255, 0.25);
+        color: #ffffff;
     }
 
     /* Cards */
@@ -524,11 +531,18 @@
             <p>Pencatatan transaksi logistik masuk ke gudang menggunakan Oracle Sequences (<code>SEQ_GD_TERIMA_M</code> & <code>SEQ_GD_TERIMA_D</code>)</p>
         </div>
     </div>
-    <div style="display: flex; gap: 10px;">
-        <button type="button" class="btn-custom btn-secondary-custom" onclick="switchTab('list')">
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <div class="breadcrumb">
+            <a href="{{ route('dashboard') }}"><i class="bi bi-house-door-fill"></i> Dashboard</a>
+            <span>/</span>
+            <span>Transaksi</span>
+            <span>/</span>
+            <span style="color: var(--text-main); font-weight: 600;">Faktur Pembelian</span>
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="switchTab('list')">
             <i class="bi bi-list-ul"></i> Lihat Daftar Transaksi
         </button>
-        <button type="button" class="btn-custom btn-primary-custom" onclick="switchTab('create')">
+        <button type="button" class="btn btn-primary" onclick="switchTab('create')">
             <i class="bi bi-plus-circle-fill"></i> + Transaksi Masuk Baru
         </button>
     </div>
