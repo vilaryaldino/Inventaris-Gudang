@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\GdTerimaBeliM;
 use App\Models\GdTerimaBeliD;
+use App\Models\PmbPurchorderM;
+use App\Models\PmbPurchorderD;
 use App\Models\MItem;
 use App\Models\MSatuan;
 use App\Models\MSatuanDasar;
@@ -23,17 +25,21 @@ class TransaksiController extends Controller
     public function fakturPembelian(Request $request)
     {
         // 1. Data Filter & Pencarian
-        $query = GdTerimaBeliM::with(['rekanan', 'details.barang', 'details.satuan']);
+        $query = GdTerimaBeliM::with(['rekanan', 'po', 'details.barang', 'details.satuan']);
 
         if ($request->filled('q')) {
             $q = trim($request->q);
             $query->where(function ($sub) use ($q) {
                 $sub->where('no_transaksi', 'LIKE', "%{$q}%")
                     ->orWhere('no_sj', 'LIKE', "%{$q}%")
+                    ->orWhere('no_po', 'LIKE', "%{$q}%")
                     ->orWhere('keterangan', 'LIKE', "%{$q}%")
                     ->orWhereHas('rekanan', function ($r) use ($q) {
                         $r->where('nama_rekanan', 'LIKE', "%{$q}%")
                           ->orWhere('kode_rekanan', 'LIKE', "%{$q}%");
+                    })
+                    ->orWhereHas('po', function ($p) use ($q) {
+                        $p->where('no_transaksi', 'LIKE', "%{$q}%");
                     });
             });
         }
@@ -64,10 +70,17 @@ class TransaksiController extends Controller
         $totalQtyBarang = (float) GdTerimaBeliD::where('is_stok', 'Y')->sum('jumlah');
         $totalNilaiFaktur = (float) GdTerimaBeliD::sum('total');
 
-        // 4. Data Master untuk Formulir Input
+        // 4. Data Master & Simulasi Purchase Order untuk Formulir Input
         $rekanans = MRekanan::orderBy('nama_rekanan')->get();
         $items = MItem::with(['satuan.satuanDasar'])->orderBy('kode_barang')->get();
         $satuans = MSatuan::orderBy('kode_satuan')->get();
+
+        // Ambil daftar Purchase Order yang memiliki item barang di pmb_purchorder_d
+        $poList = PmbPurchorderM::with(['rekanan'])
+            ->has('details')
+            ->orderBy('id_transaksi', 'desc')
+            ->take(50)
+            ->get();
 
         // 5. Generate Nomor Transaksi Preview
         $todayStr = Carbon::now()->format('ym');
@@ -88,6 +101,7 @@ class TransaksiController extends Controller
             'rekanans',
             'items',
             'satuans',
+            'poList',
             'noTransaksiPreview',
             'tglTransaksi',
             'tglInsert',
@@ -96,9 +110,85 @@ class TransaksiController extends Controller
     }
 
     /**
+     * Ambil data Purchase Order (Header + Detail Barang) via AJAX.
+     * Digunakan untuk auto-populate form penerimaan gudang.
+     */
+    public function getPurchaseOrder(Request $request, $id)
+    {
+        $query = PmbPurchorderM::with([
+            'rekanan',
+            'details.barang.satuan',
+            'details.satuan',
+        ]);
+
+        if (is_numeric($id)) {
+            $po = $query->where('id_transaksi', $id)->first();
+        } else {
+            $po = $query->where('no_transaksi', $id)->first();
+        }
+
+        if (!$po) {
+            return response()->json([
+                'success' => false,
+                'message' => "Purchase Order [{$id}] tidak ditemukan di database Oracle.",
+            ], 404);
+        }
+
+        if ($po->details->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => "Purchase Order [{$po->no_transaksi}] tidak memiliki detail item barang untuk diproses.",
+            ], 422);
+        }
+
+        $poDetails = $po->details->map(function ($d) {
+            // Hitung akumulasi qty yang sudah pernah diterima untuk item detail PO ini
+            $sudahDiterima = (float) GdTerimaBeliD::where('id_po_detail', $d->id_detail)->sum('jumlah');
+            $sisaQty = max(0, (float) $d->jumlah - $sudahDiterima);
+
+            return [
+                'id_detail' => (int) $d->id_detail,
+                'no_urut' => (int) $d->no_urut,
+                'id_barang' => (int) $d->id_barang,
+                'kode_barang' => $d->barang ? $d->barang->kode_barang : "BRG-{$d->id_barang}",
+                'nama_barang' => $d->barang ? $d->barang->nama_barang : "Barang #{$d->id_barang}",
+                'id_satuan' => (int) $d->id_satuan,
+                'nama_satuan' => $d->satuan ? $d->satuan->nama_satuan : ($d->barang?->satuan?->nama_satuan ?? 'Pcs'),
+                'qty_po' => (float) $d->jumlah,
+                'sudah_diterima' => $sudahDiterima,
+                'sisa_qty' => $sisaQty,
+                'harga' => (float) $d->harga,
+                'total' => (float) ($sisaQty > 0 ? ($sisaQty * (float) $d->harga) : $d->total),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id_transaksi' => $po->id_transaksi,
+                'no_transaksi' => $po->no_transaksi,
+                'tgl_transaksi' => $po->tgl_transaksi ? Carbon::parse($po->tgl_transaksi)->format('d/m/Y') : '-',
+                'id_rekanan' => $po->id_rekanan,
+                'rekanan' => [
+                    'id' => $po->rekanan ? $po->rekanan->id : $po->id_rekanan,
+                    'nama' => $po->rekanan ? $po->rekanan->nama_rekanan : "Pemasok #{$po->id_rekanan}",
+                    'kode' => $po->rekanan ? $po->rekanan->kode_rekanan : '-',
+                    'alamat' => $po->rekanan ? $po->rekanan->alamat : 'Alamat tidak terdata',
+                    'no_telp' => $po->rekanan ? $po->rekanan->no_telp : '-',
+                ],
+                'keterangan' => $po->keterangan,
+                'items' => $poDetails,
+                'total_items' => $poDetails->count(),
+                'total_qty_po' => (float) $po->total_qty,
+                'total_nilai_po' => (float) $po->total_nilai,
+            ]
+        ]);
+    }
+
+    /**
      * Simpan Transaksi Penerimaan Pembelian Baru.
-     * Menggunakan Sequence Oracle SEQ_GD_TERIMA_M untuk Header dan SEQ_GD_TERIMA_D untuk Detail.
-     * Dibungkus dalam DB Transaction untuk menjamin integritas data (ACID).
+     * Menggunakan data dari PO: User TIDAK BOLEH menambah item di luar PO.
+     * Validasi backend memastikan item yang disimpan valid dan berasal dari PO tersebut.
      */
     public function storeFakturPembelian(Request $request)
     {
@@ -106,34 +196,59 @@ class TransaksiController extends Controller
         $validated = $request->validate([
             'no_transaksi' => 'nullable|string|max:50',
             'tgl_transaksi' => 'required',
-            'id_rekanan' => 'required|integer|exists:m_rekanan,id',
+            'id_po' => 'required|integer',
             'no_sj' => 'nullable|string|max:50',
             'tgl_sj' => 'nullable',
             'keterangan' => 'nullable|string|max:255',
             'items' => 'required|array|min:1',
-            'items.*.id_barang' => 'required|integer|exists:m_item,id_barang',
-            'items.*.id_satuan' => 'required|integer|exists:m_satuan,id',
+            'items.*.id_po_detail' => 'required|integer',
             'items.*.jumlah' => 'required|numeric|min:0.0001',
-            'items.*.harga_satuan' => 'nullable|numeric|min:0',
         ], [
-            'id_rekanan.required' => 'Pemasok / Rekanan wajib dipilih.',
-            'id_rekanan.exists' => 'Rekanan yang dipilih tidak ditemukan di master data.',
-            'items.required' => 'Daftar barang faktur tidak boleh kosong.',
-            'items.min' => 'Faktur harus berisi minimal 1 barang.',
-            'items.*.id_barang.required' => 'Barang pada setiap baris wajib dipilih.',
-            'items.*.id_barang.exists' => 'Barang yang dipilih tidak valid di database.',
-            'items.*.id_satuan.required' => 'Satuan barang wajib dipilih.',
-            'items.*.jumlah.required' => 'Jumlah barang wajib diisi dan lebih besar dari 0.',
+            'id_po.required' => 'Nomor Purchase Order (PO) wajib dipilih.',
+            'items.required' => 'Daftar barang penerimaan PO tidak boleh kosong.',
+            'items.min' => 'Faktur harus berisi minimal 1 item barang yang diterima.',
+            'items.*.id_po_detail.required' => 'Referensi item PO tidak valid.',
+            'items.*.jumlah.required' => 'Kuantitas barang yang diterima wajib diisi.',
+            'items.*.jumlah.min' => 'Kuantitas barang yang diterima harus lebih besar dari 0.',
         ]);
 
         try {
             DB::beginTransaction();
 
-            // 2. Ambil Sequence ID untuk Header dari Oracle SEQ_GD_TERIMA_M
+            // 2. Ambil Data PO dan Detail Terkait untuk Validasi Keamanan Backend
+            $po = PmbPurchorderM::with('details')->findOrFail($request->id_po);
+            $poDetailsMap = $po->details->keyBy('id_detail');
+
+            // 3. Validasi Integritas Bisnis: Pastikan SEMUA item yang dikirim berasal dari PO ini!
+            foreach ($request->items as $idx => $itemData) {
+                $poDetailId = (int) $itemData['id_po_detail'];
+
+                if (!$poDetailsMap->has($poDetailId)) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Pelanggaran Aturan Bisnis: Baris ke-" . ($idx + 1) . " (Detail ID: {$poDetailId}) bukan bagian dari Purchase Order [{$po->no_transaksi}]. Penambahan barang di luar PO dilarang!",
+                    ], 422);
+                }
+
+                $poDetail = $poDetailsMap->get($poDetailId);
+                $qtyDiterima = (float) $itemData['jumlah'];
+                $qtyMaksimal = (float) $poDetail->jumlah;
+
+                if ($qtyDiterima > $qtyMaksimal) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Kuantitas diterima ({$qtyDiterima}) pada baris ke-" . ($idx + 1) . " melebihi pesanan PO ({$qtyMaksimal}). Penerimaan tidak boleh melebihi kuantitas PO!",
+                    ], 422);
+                }
+            }
+
+            // 4. Ambil Sequence ID untuk Header dari Oracle SEQ_GD_TERIMA_M
             $seqHeader = DB::selectOne("SELECT SEQ_GD_TERIMA_M.NEXTVAL as val FROM DUAL");
             $idTransaksi = (int) $seqHeader->val;
 
-            // 3. Format Tanggal
+            // 5. Format Tanggal
             $tglTransaksi = Carbon::hasFormat($request->tgl_transaksi, 'd/m/Y')
                 ? Carbon::createFromFormat('d/m/Y', $request->tgl_transaksi)->format('Y-m-d H:i:s')
                 : Carbon::parse($request->tgl_transaksi)->format('Y-m-d H:i:s');
@@ -147,13 +262,12 @@ class TransaksiController extends Controller
                 $tglSj = $tglTransaksi;
             }
 
-            // 4. Nomor Transaksi Otomatis
+            // 6. Nomor Transaksi Otomatis
             $noCounter = str_pad($idTransaksi, 5, '0', STR_PAD_LEFT);
             $noTransaksi = $request->filled('no_transaksi') && $request->no_transaksi !== '-'
                 ? trim($request->no_transaksi)
                 : 'TB' . Carbon::now()->format('ym') . $noCounter;
 
-            // Pastikan tidak ada duplikasi nomor transaksi
             $cekNo = DB::table('gd_terima_beli_m')->where('no_transaksi', $noTransaksi)->exists();
             if ($cekNo) {
                 $noTransaksi = 'TB' . Carbon::now()->format('ym') . $noCounter . '-' . $idTransaksi;
@@ -162,7 +276,7 @@ class TransaksiController extends Controller
             $nowStr = Carbon::now()->format('Y-m-d H:i:s');
             $operator = auth()->check() ? auth()->user()->name : 'SYSTEM';
 
-            // 5. Simpan Header (gd_terima_beli_m)
+            // 7. Simpan Header (gd_terima_beli_m)
             DB::table('gd_terima_beli_m')->insert([
                 'id_transaksi' => $idTransaksi,
                 'no_transaksi' => $noTransaksi,
@@ -172,40 +286,44 @@ class TransaksiController extends Controller
                 'tgl_transaksi' => $tglTransaksi,
                 'no_sj' => $request->filled('no_sj') ? trim($request->no_sj) : '-',
                 'tgl_sj' => $tglSj,
-                'id_rekanan' => $request->id_rekanan,
-                'id_po' => null,
+                'id_rekanan' => $po->id_rekanan,
+                'id_po' => $po->id_transaksi,
+                'no_po' => $po->no_transaksi,
                 'keterangan' => $request->keterangan,
                 'tgl_insert' => $nowStr,
                 'opr_insert' => $operator,
             ]);
 
-            // 6. Simpan Detail Barang (gd_terima_beli_d)
+            // 8. Simpan Detail Barang (gd_terima_beli_d)
             $noUrut = 1;
             foreach ($request->items as $itemData) {
+                $poDetail = $poDetailsMap->get((int) $itemData['id_po_detail']);
+                $jumlah = (float) $itemData['jumlah'];
+
+                // Harga dikunci server-side dari PO asli demi keamanan finansial
+                $hargaSatuan = (float) $poDetail->harga;
+                $totalNilai = $jumlah * $hargaSatuan;
+
                 // Ambil Sequence ID untuk Detail dari Oracle SEQ_GD_TERIMA_D
                 $seqDetail = DB::selectOne("SELECT SEQ_GD_TERIMA_D.NEXTVAL as val FROM DUAL");
                 $idDetail = (int) $seqDetail->val;
-
-                $jumlah = (float) $itemData['jumlah'];
-                $hargaSatuan = isset($itemData['harga_satuan']) ? (float) $itemData['harga_satuan'] : 0;
-                $totalNilai = $jumlah * $hargaSatuan;
 
                 DB::table('gd_terima_beli_d')->insert([
                     'id_detail' => $idDetail,
                     'id_transaksi' => $idTransaksi,
                     'no_urut' => $noUrut,
-                    'id_barang' => (int) $itemData['id_barang'],
-                    'id_satuan' => (int) $itemData['id_satuan'],
+                    'id_barang' => (int) $poDetail->id_barang,
+                    'id_satuan' => (int) $poDetail->id_satuan,
                     'jumlah' => $jumlah,
                     'total' => $totalNilai,
-                    'tgl_dibutuhkan' => null,
-                    'is_project' => 'N',
-                    'id_project' => null,
-                    'id_po' => null,
-                    'id_po_detail' => null,
-                    'jumlah2' => null,
-                    'id_satuan2' => null,
-                    'id_pesan' => null,
+                    'tgl_dibutuhkan' => $poDetail->tgl_dibutuhkan,
+                    'is_project' => $poDetail->is_project ?? 'N',
+                    'id_project' => $poDetail->id_project,
+                    'id_po' => $po->id_transaksi,
+                    'id_po_detail' => $poDetail->id_detail,
+                    'jumlah2' => $poDetail->jumlah2,
+                    'id_satuan2' => $poDetail->id_satuan2,
+                    'id_pesan' => $poDetail->id_pesan,
                     'is_stok' => 'Y',
                     'lokasi_gdg' => null,
                 ]);
@@ -218,14 +336,14 @@ class TransaksiController extends Controller
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => "Faktur Penerimaan [{$noTransaksi}] berhasil disimpan ke Oracle Database! (ID Transaksi: {$idTransaksi})",
+                    'message' => "Faktur Penerimaan [{$noTransaksi}] dari PO [{$po->no_transaksi}] berhasil disimpan ke Oracle Database! (ID: {$idTransaksi})",
                     'id_transaksi' => $idTransaksi,
                     'no_transaksi' => $noTransaksi,
                 ]);
             }
 
             return redirect()->route('transaksi.faktur-pembelian')
-                ->with('success', "Faktur Penerimaan [{$noTransaksi}] berhasil disimpan dengan ID Transaksi: {$idTransaksi}.");
+                ->with('success', "Faktur Penerimaan [{$noTransaksi}] dari PO [{$po->no_transaksi}] berhasil disimpan dengan ID Transaksi: {$idTransaksi}.");
 
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -248,7 +366,7 @@ class TransaksiController extends Controller
      */
     public function showFakturPembelian(Request $request, $id)
     {
-        $trx = GdTerimaBeliM::with(['rekanan', 'details.barang', 'details.satuan'])
+        $trx = GdTerimaBeliM::with(['rekanan', 'po', 'details.barang', 'details.satuan'])
             ->findOrFail($id);
 
         if ($request->ajax() || $request->wantsJson()) {
@@ -258,6 +376,8 @@ class TransaksiController extends Controller
                     'id_transaksi' => $trx->id_transaksi,
                     'no_transaksi' => $trx->no_transaksi,
                     'tgl_transaksi' => $trx->tgl_transaksi ? Carbon::parse($trx->tgl_transaksi)->format('d/m/Y') : '-',
+                    'id_po' => $trx->id_po,
+                    'no_po' => $trx->po ? $trx->po->no_transaksi : ($trx->no_po ?? ($trx->id_po ? "PO #{$trx->id_po}" : '-')),
                     'no_sj' => $trx->no_sj ?? '-',
                     'tgl_sj' => $trx->tgl_sj ? Carbon::parse($trx->tgl_sj)->format('d/m/Y') : '-',
                     'opr_insert' => $trx->opr_insert,
@@ -272,6 +392,7 @@ class TransaksiController extends Controller
                     'items' => $trx->details->map(function ($d) {
                         return [
                             'id_detail' => $d->id_detail,
+                            'id_po_detail' => $d->id_po_detail,
                             'no_urut' => $d->no_urut,
                             'kode_barang' => $d->barang ? $d->barang->kode_barang : "BRG-{$d->id_barang}",
                             'nama_barang' => $d->barang ? $d->barang->nama_barang : "Barang #{$d->id_barang}",
@@ -296,7 +417,7 @@ class TransaksiController extends Controller
      */
     public function cetakFakturPembelian($id)
     {
-        $trx = GdTerimaBeliM::with(['rekanan', 'details.barang', 'details.satuan'])
+        $trx = GdTerimaBeliM::with(['rekanan', 'po', 'details.barang', 'details.satuan'])
             ->findOrFail($id);
 
         return view('transaksi.cetak_faktur', compact('trx'));

@@ -21,6 +21,7 @@ Route::prefix('master')->name('master.')->group(function () {
 Route::prefix('transaksi')->name('transaksi.')->group(function () {
     Route::get('/faktur-pembelian', [TransaksiController::class, 'fakturPembelian'])->name('faktur-pembelian');
     Route::post('/faktur-pembelian', [TransaksiController::class, 'storeFakturPembelian'])->name('faktur-pembelian.store');
+    Route::get('/faktur-pembelian/po/{id}', [TransaksiController::class, 'getPurchaseOrder'])->name('faktur-pembelian.po');
     Route::get('/faktur-pembelian/{id}', [TransaksiController::class, 'showFakturPembelian'])->name('faktur-pembelian.show');
     Route::get('/faktur-pembelian/{id}/cetak', [TransaksiController::class, 'cetakFakturPembelian'])->name('faktur-pembelian.cetak');
     Route::delete('/faktur-pembelian/{id}', [TransaksiController::class, 'destroyFakturPembelian'])->name('faktur-pembelian.destroy');

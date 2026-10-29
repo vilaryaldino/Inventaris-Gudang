@@ -87,4 +87,12 @@ class GdTerimaBeliD extends Model
     {
         return $this->belongsTo(MSatuan::class, 'id_satuan', 'id');
     }
+
+    /**
+     * Relasi ke Purchase Order Detail (pmb_purchorder_d).
+     */
+    public function poDetail(): BelongsTo
+    {
+        return $this->belongsTo(PmbPurchorderD::class, 'id_po_detail', 'id_detail');
+    }
 }

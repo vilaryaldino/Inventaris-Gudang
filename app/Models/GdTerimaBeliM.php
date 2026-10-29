@@ -43,6 +43,7 @@ class GdTerimaBeliM extends Model
         'tgl_sj',
         'id_rekanan',
         'id_po',
+        'no_po',
         'keterangan',
         'tgl_insert',
         'opr_insert',
@@ -75,6 +76,14 @@ class GdTerimaBeliM extends Model
     public function rekanan(): BelongsTo
     {
         return $this->belongsTo(MRekanan::class, 'id_rekanan', 'id');
+    }
+
+    /**
+     * Relasi ke Purchase Order Header (pmb_purchorder_m).
+     */
+    public function po(): BelongsTo
+    {
+        return $this->belongsTo(PmbPurchorderM::class, 'id_po', 'id_transaksi');
     }
 
     /**
