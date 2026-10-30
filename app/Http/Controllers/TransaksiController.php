@@ -110,6 +110,33 @@ class TransaksiController extends Controller
     }
 
     /**
+     * Ambil daftar Purchase Order (PO) berdasarkan ID Rekanan via AJAX.
+     * Hanya mengembalikan PO yang memiliki detail item barang.
+     */
+    public function getPoByRekanan(Request $request, $id_rekanan)
+    {
+        $pos = PmbPurchorderM::where('id_rekanan', $id_rekanan)
+            ->has('details')
+            ->orderBy('id_transaksi', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'count' => $pos->count(),
+            'data' => $pos->map(function ($po) {
+                return [
+                    'id_transaksi' => $po->id_transaksi,
+                    'no_transaksi' => $po->no_transaksi,
+                    'tgl_transaksi' => $po->tgl_transaksi ? Carbon::parse($po->tgl_transaksi)->format('d/m/Y') : '-',
+                    'total_items' => $po->details->count(),
+                    'total_qty' => (float) $po->total_qty,
+                    'total_nilai' => (float) $po->total_nilai,
+                ];
+            })
+        ]);
+    }
+
+    /**
      * Ambil data Purchase Order (Header + Detail Barang) via AJAX.
      * Digunakan untuk auto-populate form penerimaan gudang.
      */
@@ -196,6 +223,7 @@ class TransaksiController extends Controller
         $validated = $request->validate([
             'no_transaksi' => 'nullable|string|max:50',
             'tgl_transaksi' => 'required',
+            'id_rekanan' => 'required|integer|exists:m_rekanan,id',
             'id_po' => 'required|integer',
             'no_sj' => 'nullable|string|max:50',
             'tgl_sj' => 'nullable',
@@ -204,6 +232,8 @@ class TransaksiController extends Controller
             'items.*.id_po_detail' => 'required|integer',
             'items.*.jumlah' => 'required|numeric|min:0.0001',
         ], [
+            'id_rekanan.required' => 'Rekanan / Pemasok wajib dipilih terlebih dahulu.',
+            'id_rekanan.exists' => 'Data rekanan tidak valid di database.',
             'id_po.required' => 'Nomor Purchase Order (PO) wajib dipilih.',
             'items.required' => 'Daftar barang penerimaan PO tidak boleh kosong.',
             'items.min' => 'Faktur harus berisi minimal 1 item barang yang diterima.',
@@ -217,6 +247,16 @@ class TransaksiController extends Controller
 
             // 2. Ambil Data PO dan Detail Terkait untuk Validasi Keamanan Backend
             $po = PmbPurchorderM::with('details')->findOrFail($request->id_po);
+
+            // Validasi apakah PO memang milik Rekanan yang dipilih
+            if ((int) $po->id_rekanan !== (int) $request->id_rekanan) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => "Pelanggaran Integritas: Purchase Order [{$po->no_transaksi}] bukan milik rekanan yang dipilih!",
+                ], 422);
+            }
+
             $poDetailsMap = $po->details->keyBy('id_detail');
 
             // 3. Validasi Integritas Bisnis: Pastikan SEMUA item yang dikirim berasal dari PO ini!

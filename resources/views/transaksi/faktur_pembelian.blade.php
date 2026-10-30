@@ -777,6 +777,49 @@
                 <span class="badge-status info">Sequence: SEQ_GD_TERIMA_M</span>
             </div>
             <div class="card-panel-body">
+                
+                <!-- SELEKSI UTAMA: REKANAN & NOMOR PO (SESUAI ATURAN BISNIS) -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 22px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; align-items: flex-start;">
+                        
+                        <!-- 1. Rekanan * -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 13.5px; font-weight: 700; color: #0f172a;">
+                                Rekanan <span class="required">*</span>
+                            </label>
+                            <select class="form-select" id="selectRekanan" name="id_rekanan" onchange="onRekananChange(this.value)" required style="padding: 10px 14px; font-size: 13.5px; border-radius: 8px; border-color: #cbd5e1; background-color: #ffffff;">
+                                <option value="">-- Pilih Rekanan / Vendor --</option>
+                                @foreach($rekanans as $rek)
+                                    <option value="{{ $rek->id }}" 
+                                            data-kode="{{ $rek->kode_rekanan }}" 
+                                            data-nama="{{ $rek->nama_rekanan }}" 
+                                            data-alamat="{{ $rek->alamat }}"
+                                            data-telp="{{ $rek->no_telp }}">
+                                        {{ $rek->nama_rekanan }} ({{ $rek->kode_rekanan }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small id="rekananSelectHelp" style="font-size: 11.5px; color: #64748b; margin-top: 5px; display: block;">
+                                <i class="bi bi-info-circle"></i> Pilih rekanan terlebih dahulu untuk memuat daftar Purchase Order.
+                            </small>
+                        </div>
+
+                        <!-- 2. No. PO * (Tergantung Rekanan) -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 13.5px; font-weight: 700; color: #0f172a;">
+                                No. PO <span class="required">*</span>
+                            </label>
+                            <select class="form-select" id="selectPO" name="id_po" onchange="muatDataPO(this.value)" disabled required style="padding: 10px 14px; font-size: 13.5px; border-radius: 8px; border-color: #cbd5e1; background-color: #f1f5f9;">
+                                <option value="">-- Pilih Rekanan Terlebih Dahulu --</option>
+                            </select>
+                            <small id="poSelectHelp" style="font-size: 11.5px; color: #64748b; margin-top: 5px; display: block;">
+                                Pilihan PO otomatis disaring berdasarkan rekanan yang dipilih.
+                            </small>
+                        </div>
+
+                    </div>
+                </div>
+
                 <div class="row-grid-3">
                     
                     <!-- Kolom 1: No Transaksi & Tanggal -->
@@ -818,41 +861,20 @@
                         </div>
                     </div>
 
-                    <!-- Kolom 2: Purchase Order & Rekanan Terkunci -->
+                    <!-- Kolom 2: Informasi Rekanan & Surat Jalan -->
                     <div>
                         <div class="form-group">
-                            <label class="form-label">Nomor Purchase Order (PO) <span class="required">*</span></label>
-                            <select class="form-select" id="selectPO" name="id_po" onchange="muatDataPO(this.value)" required>
-                                <option value="">-- Pilih Nomor Purchase Order (PO) --</option>
-                                @foreach($poList as $po)
-                                    <option value="{{ $po->id_transaksi }}" data-no="{{ $po->no_transaksi }}">
-                                        {{ $po->no_transaksi }} - {{ $po->rekanan?->nama_rekanan ?? 'No Rekanan' }} ({{ $po->tgl_transaksi ? \Carbon\Carbon::parse($po->tgl_transaksi)->format('d/m/Y') : '-' }})
-                                    </option>
-                                @endforeach
-                            </select>
-                            <div class="input-group" style="margin-top: 6px;">
-                                <input type="text" id="inputManualPO" class="form-control" placeholder="Atau ketik No. PO / ID PO..." style="font-size: 12px;">
-                                <button type="button" class="btn btn-secondary" onclick="cariPoManual()" style="font-size: 12px; padding: 4px 12px;">
-                                    <i class="bi bi-search"></i> Cari PO
-                                </button>
-                            </div>
-                            <small style="font-size: 11px; color: #64748b;">Pilih PO untuk menarik data rekanan dan rincian barang otomatis dari database Oracle.</small>
-                        </div>
-
-                        <!-- Rekanan / Pemasok (Terkunci Otomatis dari PO) -->
-                        <div class="form-group">
-                            <label class="form-label">Pemasok / Vendor (Terkunci Otomatis dari PO)</label>
-                            <input type="hidden" id="idRekanan" name="id_rekanan" value="">
+                            <label class="form-label">Detail Rekanan Terpilih</label>
                             <div class="rekanan-selected-badge" id="rekananBadge" style="display: flex;">
                                 <div class="rekanan-info">
                                     <i class="bi bi-building-check fs-5 text-primary"></i>
                                     <div class="rekanan-details">
-                                        <strong id="badgeNamaRekanan">Pilih Nomor PO terlebih dahulu</strong>
-                                        <span id="badgeDetailRekanan">Data pemasok akan terisi otomatis setelah PO dipilih</span>
+                                        <strong id="badgeNamaRekanan">Pilih Rekanan terlebih dahulu</strong>
+                                        <span id="badgeDetailRekanan">Data kontak & alamat rekanan akan tampil di sini</span>
                                     </div>
                                 </div>
                                 <span class="badge-status success" id="badgePoLocked" style="display: none;">
-                                    <i class="bi bi-lock-fill"></i> Terkunci PO
+                                    <i class="bi bi-check-circle-fill"></i> PO Siap
                                 </span>
                             </div>
                         </div>
@@ -872,7 +894,7 @@
                     <div>
                         <div class="form-group" style="height: 100%; display: flex; flex-direction: column;">
                             <label class="form-label">Keterangan / Catatan Transaksi</label>
-                            <textarea class="form-control" id="keteranganTransaksi" name="keterangan" style="flex: 1; resize: vertical; min-height: 140px;" placeholder="Tuliskan catatan faktur pembelian barang...">Penerimaan barang pembelian operasional gudang</textarea>
+                            <textarea class="form-control" id="keteranganTransaksi" name="keterangan" style="flex: 1; resize: vertical; min-height: 140px;" placeholder="Tuliskan catatan faktur pembelian barang...">Penerimaan barang dari Purchase Order</textarea>
                         </div>
                     </div>
 
@@ -888,18 +910,18 @@
             </div>
             <div class="card-panel-body">
                 
-                <!-- Notice Aturan Bisnis PO (Tombol Tambah Barang Manual Ditiadakan) -->
-                <div class="alert-info-po" id="poAlertInfo" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                <!-- Notice Aturan Bisnis PO -->
+                <div class="alert-info-po" id="poAlertInfo" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; transition: all 0.3s ease;">
                     <div style="display: flex; align-items: center; gap: 14px;">
-                        <div style="width: 42px; height: 42px; border-radius: 10px; background: #dbeafe; display: flex; align-items: center; justify-content: center; color: #1d4ed8; font-size: 20px; flex-shrink: 0;">
-                            <i class="bi bi-shield-lock-fill"></i>
+                        <div id="poAlertIconWrap" style="width: 42px; height: 42px; border-radius: 10px; background: #dbeafe; display: flex; align-items: center; justify-content: center; color: #1d4ed8; font-size: 20px; flex-shrink: 0;">
+                            <i class="bi bi-shield-lock-fill" id="poAlertIcon"></i>
                         </div>
                         <div>
                             <div style="font-weight: 700; color: #1e3a8a; font-size: 13.5px;" id="poStatusTitle">
-                                Aturan Bisnis Penerimaan PO Aktif
+                                Tahap 1: Pilih Rekanan Terlebih Dahulu
                             </div>
                             <div style="font-size: 12px; color: #475569; margin-top: 2px;" id="poStatusDesc">
-                                Seluruh barang ditarik otomatis dari Purchase Order. <strong>User TIDAK BOLEH menambah item barang baru</strong> di luar PO. Anda hanya diizinkan untuk merevisi jumlah kuantitas (Qty) barang yang diterima.
+                                Silakan pilih <strong>Rekanan</strong> terlebih dahulu pada form di atas. Sistem akan memeriksa apakah rekanan memiliki Purchase Order (PO) aktif untuk penerimaan barang.
                             </div>
                         </div>
                     </div>
@@ -929,9 +951,9 @@
                         <tbody id="tbodyBarang">
                             <tr>
                                 <td colspan="9" style="text-align: center; padding: 40px 20px; color: #94a3b8;">
-                                    <i class="bi bi-receipt" style="font-size: 32px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
-                                    <strong style="color: #64748b;">Belum ada Purchase Order (PO) yang dipilih.</strong>
-                                    <div style="font-size: 12px; margin-top: 4px;">Silakan pilih atau cari Nomor PO pada formulir di atas untuk memuat daftar barang secara otomatis.</div>
+                                    <i class="bi bi-building-gear" style="font-size: 36px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
+                                    <strong style="color: #64748b;">Silakan pilih Rekanan terlebih dahulu.</strong>
+                                    <div style="font-size: 12px; margin-top: 4px;">Sebelum memilih PO dan memuat barang, tentukan rekanan/vendor terkait di atas.</div>
                                 </td>
                             </tr>
                         </tbody>
@@ -1084,29 +1106,205 @@
         return new Intl.NumberFormat('id-ID').format(amount);
     }
 
-    // Pencarian Manual Nomor PO
-    function cariPoManual() {
-        const val = document.getElementById('inputManualPO').value.trim();
-        if (!val) {
-            alert('Masukkan Nomor PO atau ID PO yang ingin dicari.');
+    // Handler Saat Rekanan Dipilih (Sebelum Memilih PO)
+    function onRekananChange(idRekanan) {
+        const selectPO = document.getElementById('selectPO');
+        const poHelp = document.getElementById('poSelectHelp');
+        const tbody = document.getElementById('tbodyBarang');
+        const submitBtn = document.getElementById('btnSubmitFaktur');
+        const alertInfo = document.getElementById('poAlertInfo');
+        const alertIconWrap = document.getElementById('poAlertIconWrap');
+        const alertIcon = document.getElementById('poAlertIcon');
+        const statusTitle = document.getElementById('poStatusTitle');
+        const statusDesc = document.getElementById('poStatusDesc');
+        const badgeSummaryWrap = document.getElementById('poInfoBadgeWrap');
+        const badgePoLocked = document.getElementById('badgePoLocked');
+
+        // Jika belum ada rekanan yang dipilih
+        if (!idRekanan) {
+            selectPO.disabled = true;
+            selectPO.style.backgroundColor = '#f1f5f9';
+            selectPO.style.borderColor = '#cbd5e1';
+            selectPO.innerHTML = '<option value="">-- Pilih Rekanan Terlebih Dahulu --</option>';
+            poHelp.innerHTML = 'Pilihan PO otomatis disaring berdasarkan rekanan yang dipilih.';
+            
+            document.getElementById('badgeNamaRekanan').innerText = 'Pilih Rekanan terlebih dahulu';
+            document.getElementById('badgeDetailRekanan').innerText = 'Data kontak & alamat rekanan akan tampil di sini';
+            if (badgePoLocked) badgePoLocked.style.display = 'none';
+
+            // Reset banner status ke default info
+            alertInfo.style.backgroundColor = '#eff6ff';
+            alertInfo.style.borderColor = '#bfdbfe';
+            alertIconWrap.style.backgroundColor = '#dbeafe';
+            alertIconWrap.style.color = '#1d4ed8';
+            alertIcon.className = 'bi bi-shield-lock-fill';
+            statusTitle.innerHTML = 'Tahap 1: Pilih Rekanan Terlebih Dahulu';
+            statusDesc.innerHTML = 'Silakan pilih <strong>Rekanan</strong> terlebih dahulu pada form di atas. Sistem akan memeriksa apakah rekanan memiliki Purchase Order (PO) aktif untuk penerimaan barang.';
+            badgeSummaryWrap.style.display = 'none';
+
+            // Reset table
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 40px 20px; color: #94a3b8;">
+                        <i class="bi bi-building-gear" style="font-size: 36px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
+                        <strong style="color: #64748b;">Silakan pilih Rekanan terlebih dahulu.</strong>
+                        <div style="font-size: 12px; margin-top: 4px;">Sebelum memilih PO dan memuat barang, tentukan rekanan/vendor terkait di atas.</div>
+                    </td>
+                </tr>
+            `;
+
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+            submitBtn.style.cursor = 'not-allowed';
+            document.getElementById('grandTotalQty').innerText = '0.00';
+            document.getElementById('grandTotalText').innerText = 'Rp 0';
             return;
         }
-        muatDataPO(val);
+
+        // Ambil info rekanan terpilih dari atribut opsi
+        const selectRek = document.getElementById('selectRekanan');
+        const selectedOpt = selectRek.options[selectRek.selectedIndex];
+        const rekananNama = selectedOpt.getAttribute('data-nama') || selectedOpt.text;
+        const rekananKode = selectedOpt.getAttribute('data-kode') || '-';
+        const rekananAlamat = selectedOpt.getAttribute('data-alamat') || 'Alamat tidak terdata';
+        const rekananTelp = selectedOpt.getAttribute('data-telp') || '-';
+
+        document.getElementById('badgeNamaRekanan').innerText = rekananNama;
+        document.getElementById('badgeDetailRekanan').innerText = `${rekananKode} • ${rekananAlamat} (${rekananTelp})`;
+
+        // Tampilkan status memeriksa PO via AJAX
+        selectPO.disabled = true;
+        selectPO.style.backgroundColor = '#f8fafc';
+        selectPO.innerHTML = '<option value="">Memeriksa Purchase Order di Oracle...</option>';
+        poHelp.innerHTML = '<span style="color: #2563eb;"><i class="bi bi-arrow-repeat spin"></i> Memeriksa riwayat Purchase Order di Oracle DB...</span>';
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.6';
+        submitBtn.style.cursor = 'not-allowed';
+
+        // AJAX ambil daftar PO milik Rekanan ini
+        fetch(`{{ url('transaksi/faktur-pembelian/po-by-rekanan') }}/${idRekanan}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (!res.success) {
+                alert('❌ Gagal memeriksa PO: ' + (res.message || 'Kesalahan sistem'));
+                return;
+            }
+
+            // KASUS 1: REKANAN TIDAK MEMILIKI PO (TIDAK BISA TAMBAH PENERIMAAN BARANG)
+            if (res.count === 0) {
+                selectPO.disabled = true;
+                selectPO.style.backgroundColor = '#f1f5f9';
+                selectPO.style.borderColor = '#cbd5e1';
+                selectPO.innerHTML = '<option value="" selected>-- Tidak ada PO untuk rekanan ini --</option>';
+                poHelp.innerHTML = '<span style="color: #dc2626; font-weight: 600;"><i class="bi bi-x-circle-fill"></i> Tidak ada PO untuk rekanan ini. Penerimaan barang tidak dapat dilakukan.</span>';
+
+                if (badgePoLocked) badgePoLocked.style.display = 'none';
+
+                // Ubah banner menjadi DANGER/WARNING
+                alertInfo.style.backgroundColor = '#fef2f2';
+                alertInfo.style.borderColor = '#fecaca';
+                alertIconWrap.style.backgroundColor = '#fee2e2';
+                alertIconWrap.style.color = '#dc2626';
+                alertIcon.className = 'bi bi-x-octagon-fill text-danger';
+                statusTitle.innerHTML = '<strong style="color: #991b1b;">Penerimaan Barang Tidak Dapat Dilakukan</strong>';
+                statusDesc.innerHTML = `Rekanan <strong>${rekananNama}</strong> tidak memiliki dokumen Purchase Order (PO) di database Oracle. Sesuai aturan bisnis, <strong>Anda tidak dapat melakukan penerimaan barang</strong> tanpa adanya PO yang valid.`;
+                badgeSummaryWrap.style.display = 'none';
+
+                // Tampilan tabel ditolak / diblokir
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 48px 20px; background: #fffaf0;">
+                            <i class="bi bi-slash-circle" style="font-size: 38px; display: block; margin-bottom: 8px; color: #ef4444;"></i>
+                            <strong style="color: #991b1b; font-size: 15px;">Penerimaan Barang Ditolak</strong>
+                            <div style="font-size: 12.5px; margin-top: 5px; color: #b91c1c; max-width: 540px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+                                Rekanan ini tidak memiliki Purchase Order (PO) aktif. Sistem gudang tidak mengizinkan penambahan penerimaan barang manual tanpa referensi PO resmi.
+                            </div>
+                        </td>
+                    </tr>
+                `;
+
+                // Kunci tombol simpan
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                submitBtn.style.cursor = 'not-allowed';
+                submitBtn.title = 'Rekanan ini tidak memiliki Purchase Order (PO)';
+
+                document.getElementById('grandTotalQty').innerText = '0.00';
+                document.getElementById('grandTotalText').innerText = 'Rp 0';
+
+            } else {
+                // KASUS 2: REKANAN MEMILIKI PO (DAPAT MELANJUTKAN PEMILIHAN PO)
+                selectPO.disabled = false;
+                selectPO.style.backgroundColor = '#ffffff';
+                selectPO.style.borderColor = '#2563eb';
+                
+                let optHtml = `<option value="">-- Pilih Nomor PO (${res.count} PO Tersedia) --</option>`;
+                res.data.forEach(p => {
+                    optHtml += `<option value="${p.id_transaksi}">${p.no_transaksi} (${p.tgl_transaksi} • ${p.total_items} Item)</option>`;
+                });
+                selectPO.innerHTML = optHtml;
+
+                poHelp.innerHTML = `<span style="color: #16a34a; font-weight: 600;"><i class="bi bi-check-circle-fill"></i> Ditemukan ${res.count} Purchase Order untuk rekanan ini. Silakan pilih Nomor PO.</span>`;
+
+                // Ubah banner menjadi info PO
+                alertInfo.style.backgroundColor = '#eff6ff';
+                alertInfo.style.borderColor = '#bfdbfe';
+                alertIconWrap.style.backgroundColor = '#dbeafe';
+                alertIconWrap.style.color = '#1d4ed8';
+                alertIcon.className = 'bi bi-shield-lock-fill';
+                statusTitle.innerHTML = `Pilih Nomor PO untuk Rekanan: <span style="color: #1d4ed8;">${rekananNama}</span>`;
+                statusDesc.innerHTML = `Ditemukan <strong>${res.count} Purchase Order</strong>. Silakan pilih nomor PO pada dropdown di atas untuk memuat daftar rincian barang yang akan diterima.`;
+                badgeSummaryWrap.style.display = 'none';
+
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 40px 20px; color: #2563eb;">
+                            <i class="bi bi-receipt" style="font-size: 32px; display: block; margin-bottom: 8px; color: #93c5fd;"></i>
+                            <strong style="color: #1e40af; font-size: 14px;">Silakan pilih salah satu Nomor PO di atas.</strong>
+                            <div style="font-size: 12px; margin-top: 4px; color: #64748b;">Rincian barang akan ditarik secara otomatis dari database Oracle sesuai PO yang dipilih.</div>
+                        </td>
+                    </tr>
+                `;
+
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.6';
+                submitBtn.style.cursor = 'not-allowed';
+            }
+        })
+        .catch(err => {
+            selectPO.disabled = true;
+            selectPO.innerHTML = '<option value="">Gagal memuat PO</option>';
+            poHelp.innerHTML = `<span style="color: #ef4444;">Gagal memuat data PO: ${err.message}</span>`;
+        });
     }
 
-    // Muat Data Purchase Order via AJAX dari Oracle
+    // Muat Data Purchase Order via AJAX dari Oracle Saat PO Dipilih
     function muatDataPO(poId) {
         if (!poId) {
-            resetFormPO();
             return;
         }
 
         const tbody = document.getElementById('tbodyBarang');
+        const submitBtn = document.getElementById('btnSubmitFaktur');
+        const alertInfo = document.getElementById('poAlertInfo');
+        const alertIconWrap = document.getElementById('poAlertIconWrap');
+        const alertIcon = document.getElementById('poAlertIcon');
+        const statusTitle = document.getElementById('poStatusTitle');
+        const statusDesc = document.getElementById('poStatusDesc');
+        const badgeSummaryWrap = document.getElementById('poInfoBadgeWrap');
+        const badgeSummary = document.getElementById('poBadgeSummary');
+        const badgePoLocked = document.getElementById('badgePoLocked');
+
         tbody.innerHTML = `
             <tr>
                 <td colspan="9" style="text-align: center; padding: 36px 20px; color: #2563eb;">
-                    <div style="font-size: 18px; margin-bottom: 8px;"><i class="bi bi-arrow-repeat spin"></i></div>
-                    <strong>Menghubungkan ke Oracle DB & Menarik Data Purchase Order...</strong>
+                    <div style="font-size: 20px; margin-bottom: 8px;"><i class="bi bi-arrow-repeat spin"></i></div>
+                    <strong>Menghubungkan ke Oracle DB & Menarik Rincian Barang PO...</strong>
                 </td>
             </tr>
         `;
@@ -1121,42 +1319,25 @@
         .then(res => {
             if (!res.success) {
                 alert('❌ ' + (res.message || 'Gagal memuat data Purchase Order.'));
-                resetFormPO();
                 return;
             }
 
             const data = res.data;
 
-            // 1. Sinkronisasi Data Rekanan / Vendor (Otomatis & Terkunci dari PO)
-            document.getElementById('idRekanan').value = data.id_rekanan;
-            document.getElementById('badgeNamaRekanan').innerText = data.rekanan.nama;
-            document.getElementById('badgeDetailRekanan').innerText = `${data.rekanan.kode} • ${data.rekanan.alamat} (${data.rekanan.no_telp})`;
-            document.getElementById('badgePoLocked').style.display = 'inline-flex';
+            if (badgePoLocked) badgePoLocked.style.display = 'inline-flex';
 
-            // Sinkronisasi opsi select jika pencarian via teks manual
-            const selectPO = document.getElementById('selectPO');
-            if (selectPO.value != data.id_transaksi) {
-                let foundOption = false;
-                for (let i = 0; i < selectPO.options.length; i++) {
-                    if (selectPO.options[i].value == data.id_transaksi) {
-                        selectPO.selectedIndex = i;
-                        foundOption = true;
-                        break;
-                    }
-                }
-                if (!foundOption) {
-                    const newOpt = new Option(`${data.no_transaksi} - ${data.rekanan.nama} (${data.tgl_transaksi})`, data.id_transaksi, true, true);
-                    selectPO.add(newOpt);
-                }
-            }
+            // Ubah banner menjadi SUCCESS
+            alertInfo.style.backgroundColor = '#f0fdf4';
+            alertInfo.style.borderColor = '#bbf7d0';
+            alertIconWrap.style.backgroundColor = '#dcfce7';
+            alertIconWrap.style.color = '#16a34a';
+            alertIcon.className = 'bi bi-check-circle-fill text-success';
+            statusTitle.innerHTML = `PO Terpilih: <strong style="color: #16a34a;">${data.no_transaksi}</strong> (Tgl PO: ${data.tgl_transaksi})`;
+            statusDesc.innerHTML = `Item barang ditarik otomatis dari Purchase Order. <strong>Item baru di luar PO tidak dapat ditambah</strong>. Anda hanya diizinkan untuk menyesuaikan kuantitas (Qty) yang diterima.`;
+            badgeSummaryWrap.style.display = 'block';
+            badgeSummary.innerText = `${data.total_items} Item Terdaftar di PO`;
 
-            // 2. Info Status Banner PO
-            document.getElementById('poStatusTitle').innerHTML = `PO Terpilih: <strong style="color: #2563eb;">${data.no_transaksi}</strong> (ID: ${data.id_transaksi})`;
-            document.getElementById('poStatusDesc').innerHTML = `Tgl PO: <strong>${data.tgl_transaksi}</strong> • Vendor: <strong>${data.rekanan.nama}</strong>. Kuantitas pesanan terkunci dari PO. Anda dapat merevisi kuantitas aktual yang diterima.`;
-            document.getElementById('poInfoBadgeWrap').style.display = 'block';
-            document.getElementById('poBadgeSummary').innerText = `${data.total_items} Item Terdaftar di PO`;
-
-            // 3. Render Detail Barang Persis dari PO
+            // Render Detail Barang Persis dari PO
             tbody.innerHTML = '';
             data.items.forEach((item, idx) => {
                 const tr = document.createElement('tr');
@@ -1191,7 +1372,7 @@
                                class="form-control item-qty" 
                                style="padding: 6px 10px; text-align: right; font-weight: 700; color: #1e40af; border-color: #93c5fd; background: #f0fdf4;" 
                                value="${defaultQty}" 
-                               title="Kuantitas yang diterima di gudang (Maks: ${item.qty_po})"
+                               title="Kuantitas yang diterima di gudang (Maks PO: ${item.qty_po})"
                                oninput="hitungSubtotalBaris(this)">
                         <small style="font-size: 10.5px; color: #64748b; display: block; margin-top: 2px;">Maks PO: ${item.qty_po}</small>
                     </td>
@@ -1210,13 +1391,19 @@
                 tbody.appendChild(tr);
             });
 
+            // Aktifkan tombol simpan
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+            submitBtn.title = 'Simpan Transaksi Penerimaan ke Database Oracle';
+
             hitungGrandTotal();
         })
         .catch(err => {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="9" style="text-align: center; padding: 24px; color: #ef4444;">
-                        <i class="bi bi-exclamation-triangle-fill"></i> Gagal terhubung ke server atau database Oracle: ${err.message}
+                        <i class="bi bi-exclamation-triangle-fill"></i> Gagal terhubung ke database Oracle: ${err.message}
                     </td>
                 </tr>
             `;
@@ -1271,51 +1458,32 @@
 
     // Reset Form & Kembalikan ke State Awal
     function resetFormFaktur() {
-        if (confirm('Bersihkan isian formulir penerimaan?')) {
-            document.getElementById('selectPO').value = '';
-            document.getElementById('inputManualPO').value = '';
+        if (confirm('Bersihkan seluruh isian formulir penerimaan?')) {
+            document.getElementById('selectRekanan').value = '';
             document.getElementById('keteranganTransaksi').value = '';
-            resetFormPO();
+            onRekananChange('');
         }
-    }
-
-    function resetFormPO() {
-        document.getElementById('idRekanan').value = '';
-        document.getElementById('badgeNamaRekanan').innerText = 'Pilih Nomor PO terlebih dahulu';
-        document.getElementById('badgeDetailRekanan').innerText = 'Data rekanan akan terisi otomatis setelah PO dipilih';
-        document.getElementById('badgePoLocked').style.display = 'none';
-
-        document.getElementById('poStatusTitle').innerText = 'Aturan Bisnis Penerimaan PO Aktif';
-        document.getElementById('poStatusDesc').innerHTML = 'Seluruh barang ditarik otomatis dari Purchase Order. <strong>User TIDAK BOLEH menambah item barang baru</strong> di luar PO. Anda hanya diizinkan untuk merevisi jumlah kuantitas (Qty) barang yang diterima.';
-        document.getElementById('poInfoBadgeWrap').style.display = 'none';
-
-        const tbody = document.getElementById('tbodyBarang');
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="9" style="text-align: center; padding: 40px 20px; color: #94a3b8;">
-                    <i class="bi bi-receipt" style="font-size: 32px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
-                    <strong style="color: #64748b;">Belum ada Purchase Order (PO) yang dipilih.</strong>
-                    <div style="font-size: 12px; margin-top: 4px;">Silakan pilih atau cari Nomor PO pada formulir di atas untuk memuat daftar barang secara otomatis.</div>
-                </td>
-            </tr>
-        `;
-
-        document.getElementById('grandTotalQty').innerText = '0.00';
-        document.getElementById('grandTotalText').innerText = 'Rp 0';
     }
 
     // Simpan Transaksi ke Database Oracle
     function simpanTransaksiKeOracle() {
+        const idRekanan = document.getElementById('selectRekanan').value;
         const idPo = document.getElementById('selectPO').value;
+
+        if (!idRekanan) {
+            alert('⚠️ Rekanan / Vendor wajib dipilih terlebih dahulu.');
+            document.getElementById('selectRekanan').focus();
+            return;
+        }
+
         if (!idPo) {
-            alert('⚠️ Nomor Purchase Order (PO) wajib dipilih terlebih dahulu.');
-            document.getElementById('selectPO').focus();
+            alert('⚠️ Rekanan tidak memiliki Purchase Order (PO) atau Nomor PO belum dipilih. Transaksi tidak dapat disimpan.');
             return;
         }
 
         const rows = document.querySelectorAll('#tbodyBarang tr.item-row');
         if (rows.length === 0) {
-            alert('⚠️ Purchase Order tidak memiliki item barang yang dapat diproses.');
+            alert('⚠️ Tidak ada item barang dari PO yang dapat diproses. Transaksi tidak dapat disimpan.');
             return;
         }
 
@@ -1353,6 +1521,7 @@
 
         const payload = {
             _token: '{{ csrf_token() }}',
+            id_rekanan: idRekanan,
             id_po: idPo,
             no_transaksi: document.getElementById('noTransaksi').value,
             tgl_transaksi: document.getElementById('tglTransaksi').value,
@@ -1393,6 +1562,106 @@
             alert('❌ Terjadi kesalahan jaringan atau server: ' + err.message);
         });
     }
+
+    // Inisialisasi awal saat dimuat
+    document.addEventListener('DOMContentLoaded', () => {
+        const submitBtn = document.getElementById('btnSubmitFaktur');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+            submitBtn.style.cursor = 'not-allowed';
+        }
+    });
+
+    // Lihat Rincian Detail Transaksi (Modal)
+    function lihatDetailTransaksi(idTransaksi) {
+        fetch(`{{ url('transaksi/faktur-pembelian') }}/${idTransaksi}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                const data = res.data;
+                document.getElementById('modalDetailTitle').innerText = `Rincian Faktur: ${data.no_transaksi}`;
+                document.getElementById('modalDetailSubtitle').innerText = `ID Transaksi Oracle: ${data.id_transaksi} • Tgl Input: ${data.tgl_insert}`;
+                
+                document.getElementById('modalNoPo').innerText = data.no_po || '-';
+                document.getElementById('modalRekananNama').innerText = data.rekanan.nama;
+                document.getElementById('modalRekananAlamat').innerText = `${data.rekanan.kode} • ${data.rekanan.alamat} (${data.rekanan.no_telp})`;
+
+                document.getElementById('modalTglMasuk').innerText = data.tgl_transaksi;
+                document.getElementById('modalNoSj').innerText = data.no_sj;
+                document.getElementById('modalOperator').innerText = data.opr_insert;
+
+                const tbody = document.getElementById('modalTbodyBarang');
+                tbody.innerHTML = '';
+
+                data.items.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="text-align: center; color: #64748b;">${item.no_urut}</td>
+                        <td><strong style="color: #2563eb;">${item.kode_barang}</strong></td>
+                        <td>${item.nama_barang}</td>
+                        <td style="text-align: center;">${item.satuan}</td>
+                        <td style="text-align: right; font-weight: 600;">${item.jumlah.toFixed(2)}</td>
+                        <td style="text-align: right;">${formatRupiah(item.harga_satuan)}</td>
+                        <td style="text-align: right; font-weight: 700;">${formatRupiah(item.total)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('modalTotalQty').innerText = data.total_kuantitas.toFixed(2);
+                document.getElementById('modalTotalNilai').innerText = 'Rp ' + formatRupiah(data.total_nilai);
+
+                // Set cetak URL
+                document.getElementById('modalBtnCetak').href = `{{ url('transaksi/faktur-pembelian') }}/${data.id_transaksi}/cetak`;
+
+                // Show modal
+                document.getElementById('modalDetail').classList.add('show');
+            } else {
+                alert('Gagal mengambil detail transaksi.');
+            }
+        })
+        .catch(err => {
+            alert('Kesalahan saat memuat data: ' + err.message);
+        });
+    }
+
+    function tutupModalDetail() {
+        document.getElementById('modalDetail').classList.remove('show');
+    }
+
+    // Hapus / Batalkan Transaksi
+    function hapusTransaksi(idTransaksi, noTransaksi) {
+        if (!confirm(`Apakah Anda yakin ingin membatalkan & menghapus transaksi penerimaan [${noTransaksi}] dari Database Oracle?`)) {
+            return;
+        }
+
+        fetch(`{{ url('transaksi/faktur-pembelian') }}/${idTransaksi}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                alert('✅ ' + res.message);
+                window.location.reload();
+            } else {
+                alert('❌ Gagal: ' + (res.message || 'Tidak dapat menghapus transaksi.'));
+            }
+        })
+        .catch(err => {
+            alert('Kesalahan saat menghapus transaksi: ' + err.message);
+        });
+    }
+</script>
 
     // Lihat Rincian Detail Transaksi (Modal)
     function lihatDetailTransaksi(idTransaksi) {
