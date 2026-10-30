@@ -1571,6 +1571,16 @@
             submitBtn.style.opacity = '0.6';
             submitBtn.style.cursor = 'not-allowed';
         }
+
+        // Event listener klik backdrop luar modal untuk menutup
+        const modalDetail = document.getElementById('modalDetail');
+        if (modalDetail) {
+            modalDetail.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    tutupModalDetail();
+                }
+            });
+        }
     });
 
     // Lihat Rincian Detail Transaksi (Modal)
@@ -1589,32 +1599,36 @@
                 document.getElementById('modalDetailSubtitle').innerText = `ID Transaksi Oracle: ${data.id_transaksi} • Tgl Input: ${data.tgl_insert}`;
                 
                 document.getElementById('modalNoPo').innerText = data.no_po || '-';
-                document.getElementById('modalRekananNama').innerText = data.rekanan.nama;
-                document.getElementById('modalRekananAlamat').innerText = `${data.rekanan.kode} • ${data.rekanan.alamat} (${data.rekanan.no_telp})`;
+                document.getElementById('modalRekananNama').innerText = data.rekanan?.nama || '-';
+                document.getElementById('modalRekananAlamat').innerText = `${data.rekanan?.kode || '-'} • ${data.rekanan?.alamat || '-'} (${data.rekanan?.no_telp || '-'})`;
 
-                document.getElementById('modalTglMasuk').innerText = data.tgl_transaksi;
-                document.getElementById('modalNoSj').innerText = data.no_sj;
-                document.getElementById('modalOperator').innerText = data.opr_insert;
+                document.getElementById('modalTglMasuk').innerText = data.tgl_transaksi || '-';
+                document.getElementById('modalNoSj').innerText = data.no_sj || '-';
+                document.getElementById('modalOperator').innerText = data.opr_insert || '-';
 
                 const tbody = document.getElementById('modalTbodyBarang');
                 tbody.innerHTML = '';
 
-                data.items.forEach(item => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td style="text-align: center; color: #64748b;">${item.no_urut}</td>
-                        <td><strong style="color: #2563eb;">${item.kode_barang}</strong></td>
-                        <td>${item.nama_barang}</td>
-                        <td style="text-align: center;">${item.satuan}</td>
-                        <td style="text-align: right; font-weight: 600;">${item.jumlah.toFixed(2)}</td>
-                        <td style="text-align: right;">${formatRupiah(item.harga_satuan)}</td>
-                        <td style="text-align: right; font-weight: 700;">${formatRupiah(item.total)}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+                if (data.items && data.items.length > 0) {
+                    data.items.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td style="text-align: center; color: #64748b;">${item.no_urut}</td>
+                            <td><strong style="color: #2563eb;">${item.kode_barang}</strong></td>
+                            <td>${item.nama_barang}</td>
+                            <td style="text-align: center;">${item.satuan}</td>
+                            <td style="text-align: right; font-weight: 600;">${Number(item.jumlah).toFixed(2)}</td>
+                            <td style="text-align: right;">${formatRupiah(item.harga_satuan)}</td>
+                            <td style="text-align: right; font-weight: 700;">${formatRupiah(item.total)}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Tidak ada rincian barang.</td></tr>';
+                }
 
-                document.getElementById('modalTotalQty').innerText = data.total_kuantitas.toFixed(2);
-                document.getElementById('modalTotalNilai').innerText = 'Rp ' + formatRupiah(data.total_nilai);
+                document.getElementById('modalTotalQty').innerText = Number(data.total_kuantitas || 0).toFixed(2);
+                document.getElementById('modalTotalNilai').innerText = 'Rp ' + formatRupiah(data.total_nilai || 0);
 
                 // Set cetak URL
                 document.getElementById('modalBtnCetak').href = `{{ url('transaksi/faktur-pembelian') }}/${data.id_transaksi}/cetak`;
@@ -1622,7 +1636,7 @@
                 // Show modal
                 document.getElementById('modalDetail').classList.add('show');
             } else {
-                alert('Gagal mengambil detail transaksi.');
+                alert('Gagal mengambil detail transaksi: ' + (res.message || 'Data tidak ditemukan'));
             }
         })
         .catch(err => {
@@ -1631,7 +1645,10 @@
     }
 
     function tutupModalDetail() {
-        document.getElementById('modalDetail').classList.remove('show');
+        const modal = document.getElementById('modalDetail');
+        if (modal) {
+            modal.classList.remove('show');
+        }
     }
 
     // Hapus / Batalkan Transaksi
@@ -1640,100 +1657,12 @@
             return;
         }
 
-        fetch(`{{ url('transaksi/faktur-pembelian') }}/${idTransaksi}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
-        })
-        .then(res => res.json())
-        .then(res => {
-            if (res.success) {
-                alert('✅ ' + res.message);
-                window.location.reload();
-            } else {
-                alert('❌ Gagal: ' + (res.message || 'Tidak dapat menghapus transaksi.'));
-            }
-        })
-        .catch(err => {
-            alert('Kesalahan saat menghapus transaksi: ' + err.message);
-        });
-    }
-</script>
-
-    // Lihat Rincian Detail Transaksi (Modal)
-    function lihatDetailTransaksi(idTransaksi) {
-        fetch(`{{ url('transaksi/faktur-pembelian') }}/${idTransaksi}`, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
-        })
-        .then(res => res.json())
-        .then(res => {
-            if (res.success) {
-                const data = res.data;
-                document.getElementById('modalDetailTitle').innerText = `Rincian Faktur: ${data.no_transaksi}`;
-                document.getElementById('modalDetailSubtitle').innerText = `ID Transaksi Oracle: ${data.id_transaksi} • Tgl Input: ${data.tgl_insert}`;
-                
-                document.getElementById('modalNoPo').innerText = data.no_po || '-';
-                document.getElementById('modalRekananNama').innerText = data.rekanan.nama;
-                document.getElementById('modalRekananAlamat').innerText = `${data.rekanan.kode} • ${data.rekanan.alamat} (${data.rekanan.no_telp})`;
-
-                document.getElementById('modalTglMasuk').innerText = data.tgl_transaksi;
-                document.getElementById('modalNoSj').innerText = data.no_sj;
-                document.getElementById('modalOperator').innerText = data.opr_insert;
-
-                const tbody = document.getElementById('modalTbodyBarang');
-                tbody.innerHTML = '';
-
-                data.items.forEach(item => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td style="text-align: center; color: #64748b;">${item.no_urut}</td>
-                        <td><strong style="color: #2563eb;">${item.kode_barang}</strong></td>
-                        <td>${item.nama_barang}</td>
-                        <td style="text-align: center;">${item.satuan}</td>
-                        <td style="text-align: right; font-weight: 600;">${item.jumlah.toFixed(2)}</td>
-                        <td style="text-align: right;">${formatRupiah(item.harga_satuan)}</td>
-                        <td style="text-align: right; font-weight: 700;">${formatRupiah(item.total)}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-
-                document.getElementById('modalTotalQty').innerText = data.total_kuantitas.toFixed(2);
-                document.getElementById('modalTotalNilai').innerText = 'Rp ' + formatRupiah(data.total_nilai);
-
-                // Set cetak URL
-                document.getElementById('modalBtnCetak').href = `{{ url('transaksi/faktur-pembelian') }}/${data.id_transaksi}/cetak`;
-
-                // Show modal
-                document.getElementById('modalDetail').classList.add('show');
-            } else {
-                alert('Gagal mengambil detail transaksi.');
-            }
-        })
-        .catch(err => {
-            alert('Kesalahan saat memuat data: ' + err.message);
-        });
-    }
-
-    function tutupModalDetail() {
-        document.getElementById('modalDetail').classList.remove('show');
-    }
-
-    // Hapus / Batalkan Transaksi
-    function hapusTransaksi(idTransaksi, noTransaksi) {
-        if (!confirm(`Apakah Anda yakin ingin membatalkan & menghapus transaksi penerimaan [${noTransaksi}] dari Database Oracle?`)) {
-            return;
-        }
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
 
         fetch(`{{ url('transaksi/faktur-pembelian') }}/${idTransaksi}`, {
             method: 'DELETE',
             headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-CSRF-TOKEN': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json'
             }

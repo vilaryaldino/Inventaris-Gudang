@@ -14,6 +14,10 @@
         align-items: center;
         justify-content: space-between;
         box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.25);
+  
+  
+  
+  
         position: relative;
         overflow: hidden;
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -26,7 +30,7 @@
         top: -40px;
         width: 240px;
         height: 240px;
-        border-radius: 50%;
+                                                     border-radius: 50%;
         background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, rgba(37, 99, 235, 0) 70%);
         pointer-events: none;
     }
