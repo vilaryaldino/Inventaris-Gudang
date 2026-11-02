@@ -263,13 +263,11 @@
         <table>
             <thead>
                 <tr>
-                    <th class="text-center" style="width: 40px;">No</th>
-                    <th style="width: 110px;">Kode Barang</th>
+                    <th class="text-center" style="width: 50px;">No</th>
+                    <th style="width: 130px;">Kode Barang</th>
                     <th>Nama Barang</th>
-                    <th class="text-center" style="width: 90px;">Satuan</th>
-                    <th class="text-right" style="width: 80px;">Jumlah</th>
-                    <th class="text-right" style="width: 130px;">Harga Satuan</th>
-                    <th class="text-right" style="width: 140px;">Subtotal (Rp)</th>
+                    <th class="text-center" style="width: 110px;">Satuan</th>
+                    <th class="text-right" style="width: 120px;">Jumlah Diterima</th>
                 </tr>
             </thead>
             <tbody>
@@ -279,20 +277,16 @@
                     <td><strong style="color: #1e40af; font-family: ui-monospace, monospace;">{{ $d->barang ? $d->barang->kode_barang : "BRG-{$d->id_barang}" }}</strong></td>
                     <td><strong>{{ $d->barang ? $d->barang->nama_barang : "Barang ID {$d->id_barang}" }}</strong></td>
                     <td class="text-center">{{ $d->satuan ? $d->satuan->nama_satuan : "Satuan {$d->id_satuan}" }}</td>
-                    <td class="text-right">{{ number_format($d->jumlah, 2, ',', '.') }}</td>
-                    <td class="text-right">{{ $d->barang ? number_format($d->barang->harga_satuan, 0, ',', '.') : '-' }}</td>
-                    <td class="text-right font-bold">{{ number_format($d->total, 0, ',', '.') }}</td>
+                    <td class="text-right font-bold">{{ number_format($d->jumlah, 2, ',', '.') }}</td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center" style="color: #94a3b8; padding: 24px;">Tidak ada rincian barang.</td>
+                    <td colspan="5" class="text-center" style="color: #94a3b8; padding: 24px;">Tidak ada rincian barang.</td>
                 </tr>
                 @endforelse
                 <tr class="total-row">
-                    <td colspan="4" class="text-right">GRAND TOTAL</td>
-                    <td class="text-right">{{ number_format($trx->total_kuantitas, 2, ',', '.') }}</td>
-                    <td></td>
-                    <td class="text-right" style="color: #2563eb;">Rp {{ number_format($trx->total_nilai, 0, ',', '.') }}</td>
+                    <td colspan="4" class="text-right">GRAND TOTAL KUANTITAS DITERIMA</td>
+                    <td class="text-right" style="color: #2563eb;">{{ number_format($trx->total_kuantitas, 2, ',', '.') }}</td>
                 </tr>
             </tbody>
         </table>

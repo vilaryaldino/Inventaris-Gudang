@@ -30,7 +30,9 @@
         top: -40px;
         width: 240px;
         height: 240px;
-                                                     border-radius: 50%;
+                                                     
+        
+        border-radius: 50%;
         background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, rgba(37, 99, 235, 0) 70%);
         pointer-events: none;
     }
@@ -234,8 +236,7 @@
                         <tr>
                             <th style="width: 140px;">Kode</th>
                             <th>Nama Barang</th>
-                            <th style="width: 120px;">Satuan</th>
-                            <th style="width: 160px; text-align: right;">Estimasi Harga</th>
+                            <th style="width: 140px;">Satuan</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -252,13 +253,10 @@
                                         {{ $item->satuan?->kode_satuan ?? '-' }}
                                     </span>
                                 </td>
-                                <td style="text-align: right; font-weight: 700; color: #0f172a;">
-                                    Rp {{ number_format($item->harga_satuan, 0, ',', '.') }}
-                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" style="padding: 36px 20px; text-align: center; color: #94a3b8;">
+                                <td colspan="3" style="padding: 36px 20px; text-align: center; color: #94a3b8;">
                                     <i class="bi bi-inbox" style="font-size: 28px; display: block; margin-bottom: 8px;"></i>
                                     <span>Belum ada data barang.</span>
                                 </td>

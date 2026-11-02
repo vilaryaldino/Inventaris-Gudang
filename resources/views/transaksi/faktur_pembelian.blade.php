@@ -570,11 +570,11 @@
     </div>
     <div class="kpi-card">
         <div class="kpi-icon amber">
-            <i class="bi bi-cash-stack"></i>
+            <i class="bi bi-truck"></i>
         </div>
         <div class="kpi-meta">
-            <h3>Rp {{ number_format($totalNilaiFaktur, 0, ',', '.') }}</h3>
-            <p>Akumulasi Nilai Transaksi</p>
+            <h3>{{ count($rekanans) }}</h3>
+            <p>Pemasok / Vendor Aktif</p>
         </div>
     </div>
 </div>
@@ -664,8 +664,7 @@
                             <th style="width: 120px;">No. SJ</th>
                             <th>Pemasok / Rekanan</th>
                             <th style="text-align: center; width: 100px;">Jml Item</th>
-                            <th style="text-align: right; width: 120px;">Total Qty</th>
-                            <th style="text-align: right; width: 150px;">Total Nilai (Rp)</th>
+                            <th style="text-align: right; width: 130px;">Total Qty Diterima</th>
                             <th style="width: 130px;">Input By</th>
                             <th style="width: 120px; text-align: center;">Aksi</th>
                         </tr>
@@ -706,11 +705,8 @@
                                     <i class="bi bi-box-seam"></i> {{ $trx->details->count() }} item
                                 </span>
                             </td>
-                            <td style="text-align: right; font-weight: 600;">
-                                {{ number_format($trx->total_kuantitas, 2, ',', '.') }}
-                            </td>
                             <td style="text-align: right; font-weight: 700; color: #0f172a;">
-                                Rp {{ number_format($trx->total_nilai, 0, ',', '.') }}
+                                {{ number_format($trx->total_kuantitas, 2, ',', '.') }}
                             </td>
                             <td>
                                 <div style="font-size: 12px; font-weight: 600;">{{ $trx->opr_insert ?? 'SYSTEM' }}</div>
@@ -734,7 +730,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="10" style="text-align: center; padding: 40px; color: #94a3b8;">
+                            <td colspan="9" style="text-align: center; padding: 40px; color: #94a3b8;">
                                 <i class="bi bi-inbox fs-1" style="display: block; margin-bottom: 8px;"></i>
                                 <p style="font-weight: 600; font-size: 14px; color: #64748b;">Belum ada transaksi penerimaan pembelian yang tercatat.</p>
                                 <button type="button" class="btn-custom btn-primary-custom" style="margin-top: 10px;" onclick="switchTab('create')">
@@ -938,19 +934,17 @@
                         <thead>
                             <tr>
                                 <th style="width: 50px; text-align: center;">No</th>
-                                <th style="width: 130px;">Kode Barang</th>
+                                <th style="width: 140px;">Kode Barang</th>
                                 <th>Nama Barang</th>
                                 <th style="width: 120px; text-align: center;">Satuan</th>
                                 <th style="width: 120px; text-align: right;">Qty PO</th>
-                                <th style="width: 140px; text-align: right;">Qty Diterima <span class="required">*</span></th>
-                                <th style="width: 140px; text-align: right;">Harga Satuan</th>
-                                <th style="width: 160px; text-align: right;">Subtotal (Rp)</th>
-                                <th style="width: 130px; text-align: center;">Status Verifikasi</th>
+                                <th style="width: 160px; text-align: right;">Qty Diterima <span class="required">*</span></th>
+                                <th style="width: 140px; text-align: center;">Status Verifikasi</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyBarang">
                             <tr>
-                                <td colspan="9" style="text-align: center; padding: 40px 20px; color: #94a3b8;">
+                                <td colspan="7" style="text-align: center; padding: 40px 20px; color: #94a3b8;">
                                     <i class="bi bi-building-gear" style="font-size: 36px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
                                     <strong style="color: #64748b;">Silakan pilih Rekanan terlebih dahulu.</strong>
                                     <div style="font-size: 12px; margin-top: 4px;">Sebelum memilih PO dan memuat barang, tentukan rekanan/vendor terkait di atas.</div>
@@ -959,11 +953,9 @@
                         </tbody>
                         <tfoot>
                             <tr style="background: #f8fafc; font-weight: 800; font-size: 14px; border-top: 2px solid #cbd5e1;">
-                                <td colspan="5" style="text-align: right; color: #475569;">TOTAL KUANTITAS & NILAI DITERIMA:</td>
+                                <td colspan="5" style="text-align: right; color: #475569;">TOTAL KUANTITAS DITERIMA:</td>
                                 <td style="text-align: right; color: #2563eb;" id="grandTotalQty">0.00</td>
-                                <td></td>
-                                <td style="text-align: right; color: #0f172a;" id="grandTotalText">Rp 0</td>
-                                <td></td>
+                                <td style="text-align: center;"></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -1040,9 +1032,7 @@
                             <th style="width: 120px;">Kode Barang</th>
                             <th>Nama Barang</th>
                             <th style="width: 100px; text-align: center;">Satuan</th>
-                            <th style="width: 90px; text-align: right;">Jumlah</th>
-                            <th style="width: 120px; text-align: right;">Harga Satuan</th>
-                            <th style="width: 140px; text-align: right;">Subtotal</th>
+                            <th style="width: 120px; text-align: right;">Jumlah Diterima</th>
                         </tr>
                     </thead>
                     <tbody id="modalTbodyBarang">
@@ -1050,10 +1040,8 @@
                     </tbody>
                     <tfoot>
                         <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #cbd5e1;">
-                            <td colspan="4" style="text-align: right;">GRAND TOTAL:</td>
+                            <td colspan="4" style="text-align: right;">GRAND TOTAL KUANTITAS:</td>
                             <td style="text-align: right; color: #2563eb;" id="modalTotalQty">0.00</td>
-                            <td></td>
-                            <td style="text-align: right; color: #0f172a;" id="modalTotalNilai">Rp 0</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -1145,7 +1133,7 @@
             // Reset table
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" style="text-align: center; padding: 40px 20px; color: #94a3b8;">
+                    <td colspan="7" style="text-align: center; padding: 40px 20px; color: #94a3b8;">
                         <i class="bi bi-building-gear" style="font-size: 36px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
                         <strong style="color: #64748b;">Silakan pilih Rekanan terlebih dahulu.</strong>
                         <div style="font-size: 12px; margin-top: 4px;">Sebelum memilih PO dan memuat barang, tentukan rekanan/vendor terkait di atas.</div>
@@ -1156,8 +1144,8 @@
             submitBtn.disabled = true;
             submitBtn.style.opacity = '0.6';
             submitBtn.style.cursor = 'not-allowed';
-            document.getElementById('grandTotalQty').innerText = '0.00';
-            document.getElementById('grandTotalText').innerText = 'Rp 0';
+            const qtyElem = document.getElementById('grandTotalQty');
+            if (qtyElem) qtyElem.innerText = '0.00';
             return;
         }
 
@@ -1218,7 +1206,7 @@
                 // Tampilan tabel ditolak / diblokir
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="9" style="text-align: center; padding: 48px 20px; background: #fffaf0;">
+                        <td colspan="7" style="text-align: center; padding: 48px 20px; background: #fffaf0;">
                             <i class="bi bi-slash-circle" style="font-size: 38px; display: block; margin-bottom: 8px; color: #ef4444;"></i>
                             <strong style="color: #991b1b; font-size: 15px;">Penerimaan Barang Ditolak</strong>
                             <div style="font-size: 12.5px; margin-top: 5px; color: #b91c1c; max-width: 540px; margin-left: auto; margin-right: auto; line-height: 1.5;">
@@ -1234,8 +1222,8 @@
                 submitBtn.style.cursor = 'not-allowed';
                 submitBtn.title = 'Rekanan ini tidak memiliki Purchase Order (PO)';
 
-                document.getElementById('grandTotalQty').innerText = '0.00';
-                document.getElementById('grandTotalText').innerText = 'Rp 0';
+                const qtyElem = document.getElementById('grandTotalQty');
+                if (qtyElem) qtyElem.innerText = '0.00';
 
             } else {
                 // KASUS 2: REKANAN MEMILIKI PO (DAPAT MELANJUTKAN PEMILIHAN PO)
@@ -1343,7 +1331,6 @@
                 const tr = document.createElement('tr');
                 tr.className = 'item-row';
                 const defaultQty = item.sisa_qty > 0 ? item.sisa_qty : item.qty_po;
-                const subtotal = defaultQty * item.harga;
 
                 tr.innerHTML = `
                     <td style="text-align: center; color: #64748b; font-weight: 600;">${idx + 1}</td>
@@ -1352,7 +1339,6 @@
                         <input type="hidden" class="item-id-po-detail" value="${item.id_detail}">
                         <input type="hidden" class="item-id-barang" value="${item.id_barang}">
                         <input type="hidden" class="item-id-satuan" value="${item.id_satuan}">
-                        <input type="hidden" class="item-harga" value="${item.harga}">
                     </td>
                     <td>
                         <strong style="color: #0f172a; font-size: 13.5px;">${item.nama_barang}</strong>
@@ -1373,14 +1359,8 @@
                                style="padding: 6px 10px; text-align: right; font-weight: 700; color: #1e40af; border-color: #93c5fd; background: #f0fdf4;" 
                                value="${defaultQty}" 
                                title="Kuantitas yang diterima di gudang (Maks PO: ${item.qty_po})"
-                               oninput="hitungSubtotalBaris(this)">
+                               oninput="validasiQtyBaris(this)">
                         <small style="font-size: 10.5px; color: #64748b; display: block; margin-top: 2px;">Maks PO: ${item.qty_po}</small>
-                    </td>
-                    <td style="text-align: right; color: #475569; font-weight: 600;">
-                        Rp ${formatRupiah(item.harga)}
-                    </td>
-                    <td style="text-align: right; font-weight: 700; color: #0f172a;" class="item-subtotal-text">
-                        Rp ${formatRupiah(subtotal)}
                     </td>
                     <td style="text-align: center;">
                         <span class="badge-status success" title="Item resmi terverifikasi dari PO">
@@ -1402,7 +1382,7 @@
         .catch(err => {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" style="text-align: center; padding: 24px; color: #ef4444;">
+                    <td colspan="7" style="text-align: center; padding: 24px; color: #ef4444;">
                         <i class="bi bi-exclamation-triangle-fill"></i> Gagal terhubung ke database Oracle: ${err.message}
                     </td>
                 </tr>
@@ -1410,12 +1390,10 @@
         });
     }
 
-    // Hitung Subtotal per baris
-    function hitungSubtotalBaris(inputElem) {
-        const row = inputElem.closest('tr');
+    // Hitung & Validasi Qty per baris
+    function validasiQtyBaris(inputElem) {
         const qty = parseFloat(inputElem.value) || 0;
         const maxQty = parseFloat(inputElem.getAttribute('max')) || 0;
-        const harga = parseFloat(row.querySelector('.item-harga').value) || 0;
 
         if (maxQty > 0 && qty > maxQty) {
             inputElem.style.borderColor = '#ef4444';
@@ -1432,28 +1410,21 @@
             inputElem.style.color = '#1e40af';
         }
 
-        const validQty = parseFloat(inputElem.value) || 0;
-        const subtotal = validQty * harga;
-
-        row.querySelector('.item-subtotal-text').innerText = 'Rp ' + formatRupiah(subtotal);
         hitungGrandTotal();
     }
 
-    // Hitung Grand Total
+    // Hitung Grand Total Kuantitas Diterima
     function hitungGrandTotal() {
         let totalQty = 0;
-        let totalNilai = 0;
         const rows = document.querySelectorAll('#tbodyBarang tr.item-row');
 
         rows.forEach(row => {
             const qty = parseFloat(row.querySelector('.item-qty')?.value) || 0;
-            const harga = parseFloat(row.querySelector('.item-harga')?.value) || 0;
             totalQty += qty;
-            totalNilai += (qty * harga);
         });
 
-        document.getElementById('grandTotalQty').innerText = totalQty.toFixed(2);
-        document.getElementById('grandTotalText').innerText = 'Rp ' + formatRupiah(totalNilai);
+        const qtyElem = document.getElementById('grandTotalQty');
+        if (qtyElem) qtyElem.innerText = totalQty.toFixed(2);
     }
 
     // Reset Form & Kembalikan ke State Awal
@@ -1617,18 +1588,15 @@
                             <td><strong style="color: #2563eb;">${item.kode_barang}</strong></td>
                             <td>${item.nama_barang}</td>
                             <td style="text-align: center;">${item.satuan}</td>
-                            <td style="text-align: right; font-weight: 600;">${Number(item.jumlah).toFixed(2)}</td>
-                            <td style="text-align: right;">${formatRupiah(item.harga_satuan)}</td>
-                            <td style="text-align: right; font-weight: 700;">${formatRupiah(item.total)}</td>
+                            <td style="text-align: right; font-weight: 700; color: #0f172a;">${Number(item.jumlah).toFixed(2)}</td>
                         `;
                         tbody.appendChild(tr);
                     });
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Tidak ada rincian barang.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">Tidak ada rincian barang.</td></tr>';
                 }
 
                 document.getElementById('modalTotalQty').innerText = Number(data.total_kuantitas || 0).toFixed(2);
-                document.getElementById('modalTotalNilai').innerText = 'Rp ' + formatRupiah(data.total_nilai || 0);
 
                 // Set cetak URL
                 document.getElementById('modalBtnCetak').href = `{{ url('transaksi/faktur-pembelian') }}/${data.id_transaksi}/cetak`;

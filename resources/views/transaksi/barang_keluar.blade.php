@@ -128,7 +128,6 @@
                         <th style="width: 140px;">Kode Barang</th>
                         <th>Nama Barang</th>
                         <th style="width: 150px;">Satuan Keluar</th>
-                        <th style="width: 180px; text-align: right;">Estimasi Nilai Satuan</th>
                         <th style="width: 140px; text-align: center;">Aksi Alokasi</th>
                     </tr>
                 </thead>
@@ -147,9 +146,6 @@
                                     {{ $it->satuan?->kode_satuan ?? '-' }}
                                 </span>
                             </td>
-                            <td style="text-align: right; font-weight: 700; color: #0f172a;">
-                                Rp {{ number_format($it->harga_satuan, 0, ',', '.') }}
-                            </td>
                             <td style="text-align: center;">
                                 <button type="button" class="btn btn-secondary btn-sm" onclick="alert('Alokasi barang {{ $it->kode_barang }} ke Surat Jalan')" style="padding: 4px 10px; font-size: 11.5px;">
                                     <i class="bi bi-box-arrow-up-right text-primary"></i> Alokasi
@@ -158,7 +154,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 48px 20px; color: #94a3b8;">
+                            <td colspan="5" style="text-align: center; padding: 48px 20px; color: #94a3b8;">
                                 Belum ada data item barang.
                             </td>
                         </tr>

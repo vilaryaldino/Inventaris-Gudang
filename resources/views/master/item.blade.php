@@ -12,7 +12,7 @@
         </div>
         <div>
             <h1>Master Barang (Item)</h1>
-            <p>Kelola katalog barang gudang, satuan acuan transaksi, dan estimasi harga standar</p>
+            <p>Kelola katalog master barang gudang dan satuan acuan transaksi logistik</p>
         </div>
     </div>
     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -46,11 +46,11 @@
 
     <div class="kpi-card green">
         <div class="kpi-icon emerald">
-            <i class="bi bi-tag-fill"></i>
+            <i class="bi bi-check-circle-fill"></i>
         </div>
         <div class="kpi-meta">
-            <div class="value" style="font-size: 20px;">Rp {{ number_format($data->avg('harga_satuan') ?? 0, 0, ',', '.') }}</div>
-            <div class="label">Rata-rata Harga Satuan</div>
+            <div class="value" style="font-size: 20px;">Aktif</div>
+            <div class="label">Status Master Item</div>
         </div>
     </div>
 
@@ -99,7 +99,6 @@
                         <th>Nama Barang</th>
                         <th style="width: 150px;">Satuan Transaksi</th>
                         <th style="width: 150px;">Satuan Dasar</th>
-                        <th style="width: 180px; text-align: right;">Estimasi Harga (Rp)</th>
                         <th style="width: 110px; text-align: center;">Aksi</th>
                     </tr>
                 </thead>
@@ -130,11 +129,6 @@
                                     {{ $item->satuanDasar?->nama_satuan ?? ($item->satuan?->kode_satuan ?? '-') }}
                                 </span>
                             </td>
-                            <td style="text-align: right; font-weight: 700; color: #0f172a;">
-                                <span style="font-family: ui-monospace, SFMono-Regular, monospace; background: #f8fafc; padding: 4px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                    Rp {{ number_format($item->harga_satuan, 0, ',', '.') }}
-                                </span>
-                            </td>
                             <td>
                                 <div class="action-btn-group">
                                     <button type="button" class="btn-action-edit" title="Edit Item" onclick="alert('Edit item {{ $item->nama_barang }}')">
@@ -148,7 +142,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 48px 20px; color: #94a3b8;">
+                            <td colspan="6" style="text-align: center; padding: 48px 20px; color: #94a3b8;">
                                 <i class="bi bi-inbox" style="font-size: 36px; display: block; margin-bottom: 10px; color: #cbd5e1;"></i>
                                 <span style="font-size: 14px; font-weight: 600;">Belum ada data barang.</span>
                             </td>
