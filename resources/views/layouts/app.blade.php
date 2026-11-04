@@ -1202,8 +1202,8 @@
                     <i class="bi bi-box-seam-fill"></i>
                 </div>
                 <div class="brand-text">
-                    <h2>GudangKu</h2>
-                    <span>Enterprise System</span>
+                    <h2>PT UBP</h2>
+                    <span>Usaha Bakti Perkasa</span>
                 </div>
             </div>
 
@@ -1361,7 +1361,7 @@
                  ================================================ -->
             <footer class="app-footer">
                 <div class="footer-left">
-                    <span>&copy; {{ date('Y') }} <strong>Sistem Gudang & Logistik Enterprise</strong>. Hak Cipta Dilindungi.</span>
+                    <span>&copy; {{ date('Y') }} <strong>PT Usaha Bakti Perkasa</strong> &middot; Sistem Manajemen Gudang Enterprise. Hak Cipta Dilindungi.</span>
                 </div>
                 <div class="footer-center" style="display: flex; align-items: center; gap: 12px;">
                     <span>Database: <strong class="footer-badge">Oracle 11g Release 2 (Yajra OCI8)</strong></span>

@@ -11,6 +11,9 @@ use App\Models\MItem;
 use App\Models\MSatuan;
 use App\Models\MSatuanDasar;
 use App\Models\MRekanan;
+use App\Models\MProjectIki;
+use App\Models\GdBonKeluarM;
+use App\Models\GdBonKeluarD;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -508,14 +511,362 @@ class TransaksiController extends Controller
     }
 
     /**
-     * Tampilan Halaman Barang Keluar.
+     * Konversi angka bulan ke format Romawi (I - XII).
      */
-    public function barangKeluar()
+    private function getRomanMonth($month): string
     {
+        $romans = [
+            1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI',
+            7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII'
+        ];
+        return $romans[(int) $month] ?? 'I';
+    }
+
+    /**
+     * Tampilan Halaman Bukti Barang Keluar (Bon Keluar).
+     * Mendukung Tab Daftar Transaksi & Tab Pembuatan Transaksi Baru (Master-Detail).
+     */
+    public function barangKeluar(Request $request)
+    {
+        // 1. Query & Filter Transaksi Barang Keluar
+        $query = GdBonKeluarM::with(['project', 'details.barang', 'details.satuan']);
+
+        if ($request->filled('q')) {
+            $q = trim($request->q);
+            $query->where(function ($sub) use ($q) {
+                $sub->where('no_transaksi', 'LIKE', "%{$q}%")
+                    ->orWhere('subkon_pakai', 'LIKE', "%{$q}%")
+                    ->orWhere('no_cutting', 'LIKE', "%{$q}%")
+                    ->orWhere('keterangan', 'LIKE', "%{$q}%")
+                    ->orWhereHas('project', function ($p) use ($q) {
+                        $p->where('kd_project', 'LIKE', "%{$q}%")
+                          ->orWhere('nm_project', 'LIKE', "%{$q}%");
+                    });
+            });
+        }
+
+        if ($request->filled('id_project')) {
+            $query->where('id_project_pakai', $request->id_project);
+        }
+
+        if ($request->filled('tgl_mulai')) {
+            $query->whereDate('tgl_transaksi', '>=', Carbon::parse($request->tgl_mulai));
+        }
+
+        if ($request->filled('tgl_akhir')) {
+            $query->whereDate('tgl_transaksi', '<=', Carbon::parse($request->tgl_akhir));
+        }
+
+        $transaksiList = $query->orderBy('id_transaksi', 'desc')->paginate(15)->withQueryString();
+
+        // 2. KPI Summary
+        $totalTransaksi = GdBonKeluarM::count();
+        $totalBarangKeluar = (float) GdBonKeluarD::sum('jumlah');
+        $totalProjectTerlayani = GdBonKeluarM::whereNotNull('id_project_pakai')->distinct('id_project_pakai')->count('id_project_pakai');
+        $transaksiBulanIni = GdBonKeluarM::whereMonth('tgl_transaksi', Carbon::now()->month)
+                                         ->whereYear('tgl_transaksi', Carbon::now()->year)
+                                         ->count();
+
+        // 3. Master Data Pendukung Form
+        $projects = MProjectIki::orderBy('id_project', 'desc')->take(100)->get();
         $items = MItem::with('satuan')->orderBy('kode_barang')->get();
         $satuans = MSatuan::orderBy('kode_satuan')->get();
-        $noTransaksi = 'BK-' . Carbon::now()->format('Ymd') . '-001';
 
-        return view('transaksi.barang_keluar', compact('items', 'satuans', 'noTransaksi'));
+        $bagianList = ['GUDANG', 'FABRIKASI', 'PAINTING', 'ASSEMBLY', 'MAINTENANCE', 'GALVANISH', 'PRODUKSI'];
+        $asalStokList = ['Stok Project', 'Stok Umum', 'Stok Konsinyasi'];
+
+        // 4. Generate Nomor Transaksi Preview (Format Delphi: 5336/BKT/X/2026)
+        $romanMonth = $this->getRomanMonth(Carbon::now()->month);
+        $year = Carbon::now()->year;
+
+        // Ambil counter terakhir
+        $lastCounter = GdBonKeluarM::whereNotNull('no_transaksi_counter')
+            ->selectRaw("MAX(TO_NUMBER(REGEXP_SUBSTR(no_transaksi_counter, '^[0-9]+'))) as max_c")
+            ->value('max_c');
+
+        if (!$lastCounter || $lastCounter < 5000) {
+            $nextCounter = 5336 + $totalTransaksi + 1;
+        } else {
+            $nextCounter = (int) $lastCounter + 1;
+        }
+
+        $noTransaksiPreview = "{$nextCounter}/BKT/{$romanMonth}/{$year}";
+        $tglTransaksi = Carbon::now()->format('d/m/Y');
+        $activeTab = $request->get('tab', 'list');
+
+        return view('transaksi.barang_keluar', compact(
+            'transaksiList',
+            'totalTransaksi',
+            'totalBarangKeluar',
+            'totalProjectTerlayani',
+            'transaksiBulanIni',
+            'projects',
+            'items',
+            'satuans',
+            'bagianList',
+            'asalStokList',
+            'nextCounter',
+            'noTransaksiPreview',
+            'tglTransaksi',
+            'activeTab',
+            'romanMonth',
+            'year'
+        ));
+    }
+
+    /**
+     * Endpoint API Autocomplete / Lookup Master Project IKI.
+     */
+    public function searchProjects(Request $request)
+    {
+        $q = trim($request->get('q', ''));
+        $query = MProjectIki::query();
+
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('kd_project', 'LIKE', "%{$q}%")
+                    ->orWhere('nm_project', 'LIKE', "%{$q}%");
+            });
+        }
+
+        $projects = $query->orderBy('id_project', 'desc')->take(30)->get();
+        return response()->json($projects);
+    }
+
+    /**
+     * Simpan Transaksi Bukti Barang Keluar ke Database Oracle (gd_bon_keluar_m & gd_bon_keluar_d).
+     */
+    public function storeBarangKeluar(Request $request)
+    {
+        $request->validate([
+            'tgl_transaksi' => 'required',
+            'items' => 'required|array|min:1',
+            'items.*.id_barang' => 'required|integer',
+            'items.*.jumlah' => 'required|numeric|min:0.01',
+            'items.*.id_satuan' => 'required|integer',
+        ], [
+            'tgl_transaksi.required' => 'Tanggal transaksi wajib diisi.',
+            'items.required' => 'Minimal 1 item barang harus dimasukkan ke dalam daftar barang keluar.',
+            'items.min' => 'Minimal 1 item barang harus dimasukkan ke dalam daftar barang keluar.',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // 1. Generate ID Transaksi Header via Oracle Sequence
+            $seqHeader = DB::selectOne("SELECT SEQ_GD_BON_KELUAR_M.NEXTVAL AS id FROM dual")->id;
+
+            // 2. Format Tanggal & Nomor Transaksi
+            $tglTransaksi = Carbon::hasFormat($request->tgl_transaksi, 'd/m/Y')
+                ? Carbon::createFromFormat('d/m/Y', $request->tgl_transaksi)
+                : Carbon::parse($request->tgl_transaksi);
+            $tglTransaksiStr = $tglTransaksi->format('Y-m-d H:i:s');
+            $nowStr = Carbon::now()->format('Y-m-d H:i:s');
+            $operator = auth()->check() ? auth()->user()->name : 'ADMIN';
+
+            $romanMonth = $this->getRomanMonth($tglTransaksi->month);
+            $year = $tglTransaksi->year;
+
+            $counter = $request->filled('counter') ? trim($request->counter) : null;
+            if (!$counter) {
+                $lastCounter = GdBonKeluarM::whereNotNull('no_transaksi_counter')
+                    ->selectRaw("MAX(TO_NUMBER(REGEXP_SUBSTR(no_transaksi_counter, '^[0-9]+'))) as max_c")
+                    ->value('max_c');
+                $counter = ($lastCounter && $lastCounter >= 5000) ? ((int)$lastCounter + 1) : (5336 + GdBonKeluarM::count() + 1);
+            }
+
+            $noTransaksi = "{$counter}/BKT/{$romanMonth}/{$year}";
+
+            if ($request->filled('no_transaksi') && trim($request->no_transaksi) !== '') {
+                $noTransaksi = trim($request->no_transaksi);
+            }
+
+            $idProjectPakai = $request->filled('id_project_pakai') ? (int) $request->id_project_pakai : null;
+
+            // 3. Simpan Header Transaksi (gd_bon_keluar_m)
+            DB::table('gd_bon_keluar_m')->insert([
+                'id_transaksi' => (int) $seqHeader,
+                'no_transaksi' => $noTransaksi,
+                'no_transaksi_kode' => 'BKT',
+                'no_transaksi_counter' => (string) $counter,
+                'jns_transaksi' => 'BKT',
+                'kode_transaksi' => 'BKT',
+                'tgl_transaksi' => $tglTransaksiStr,
+                'id_project_pakai' => $idProjectPakai,
+                'subkon_pakai' => $request->subkon_pakai ?: null,
+                'id_divisi_group' => $request->filled('id_divisi_group') ? (int) $request->id_divisi_group : null,
+                'id_gudang' => $request->filled('id_gudang') ? (int) $request->id_gudang : null,
+                'no_cutting' => $request->no_cutting ?: null,
+                'keterangan' => $request->keterangan ?: null, // Note
+                'status' => '1',
+                'opr_insert' => $operator,
+                'tgl_insert' => $nowStr,
+            ]);
+
+            // 4. Simpan Detail Transaksi (gd_bon_keluar_d) secara Bebas (Free Input)
+            foreach ($request->items as $index => $it) {
+                $seqDetail = DB::selectOne("SELECT SEQ_GD_BON_KELUAR_D.NEXTVAL AS id FROM dual")->id;
+
+                $idProjectItem = !empty($it['id_project']) ? (int) $it['id_project'] : $idProjectPakai;
+
+                // Asal stok kolom berukuran VARCHAR2(1): 'P' (Project), 'U' (Umum), 'K' (Konsinyasi)
+                $asalStokRaw = $it['asal_stok'] ?? 'P';
+                if (str_starts_with(strtoupper($asalStokRaw), 'STOK P') || strtoupper($asalStokRaw) === 'P') {
+                    $asalStok = 'P';
+                } elseif (str_starts_with(strtoupper($asalStokRaw), 'STOK U') || strtoupper($asalStokRaw) === 'U') {
+                    $asalStok = 'U';
+                } elseif (str_starts_with(strtoupper($asalStokRaw), 'STOK K') || strtoupper($asalStokRaw) === 'K') {
+                    $asalStok = 'K';
+                } else {
+                    $asalStok = substr($asalStokRaw, 0, 1);
+                }
+
+                DB::table('gd_bon_keluar_d')->insert([
+                    'id_detail' => (int) $seqDetail,
+                    'id_transaksi' => (int) $seqHeader,
+                    'no_urut' => $index + 1,
+                    'id_barang' => (int) $it['id_barang'],
+                    'jumlah' => (float) $it['jumlah'],
+                    'id_satuan' => (int) $it['id_satuan'],
+                    'asal_stok' => $asalStok,
+                    'is_project' => $idProjectItem ? 'Y' : 'N',
+                    'id_project' => $idProjectItem,
+                    'heat_no' => $it['heat_no'] ?? null,
+                    'keterangan' => $it['keterangan'] ?? null,
+                ]);
+            }
+
+            DB::commit();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Bukti Barang Keluar [{$noTransaksi}] berhasil disimpan ke Oracle Database.",
+                    'data' => [
+                        'id_transaksi' => $seqHeader,
+                        'no_transaksi' => $noTransaksi,
+                    ],
+                ]);
+            }
+
+            return redirect()->route('transaksi.barang-keluar')
+                ->with('success', "Bukti Barang Keluar [{$noTransaksi}] berhasil disimpan ke Oracle Database.");
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menyimpan Bukti Barang Keluar: " . $e->getMessage());
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menyimpan transaksi ke Oracle Database: ' . $e->getMessage(),
+                ], 500);
+            }
+
+            return back()->withInput()->with('error', 'Gagal menyimpan transaksi: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Ambil Rincian Detail Transaksi Barang Keluar untuk Modal Popup.
+     */
+    public function showBarangKeluar(Request $request, $id)
+    {
+        $trx = GdBonKeluarM::with(['project', 'details.barang', 'details.satuan', 'details.project'])
+            ->findOrFail($id);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id_transaksi' => $trx->id_transaksi,
+                    'no_transaksi' => $trx->no_transaksi,
+                    'tgl_transaksi' => $trx->tgl_transaksi ? Carbon::parse($trx->tgl_transaksi)->format('d/m/Y') : '-',
+                    'subkon_pakai' => $trx->subkon_pakai ?? '-',
+                    'no_cutting' => $trx->no_cutting ?? '-',
+                    'keterangan' => $trx->keterangan ?? '-',
+                    'opr_insert' => $trx->opr_insert ?? 'ADMIN',
+                    'tgl_insert' => $trx->tgl_insert ? Carbon::parse($trx->tgl_insert)->format('d/m/Y H:i') : '-',
+                    'project' => [
+                        'id_project' => $trx->project?->id_project,
+                        'kd_project' => $trx->project?->kd_project ?? '-',
+                        'nm_project' => $trx->project?->nm_project ?? 'Umum / Non-Project',
+                    ],
+                    'items' => $trx->details->map(function ($d) {
+                        return [
+                            'id_detail' => $d->id_detail,
+                            'no_urut' => $d->no_urut,
+                            'kode_barang' => $d->barang ? $d->barang->kode_barang : "BRG-{$d->id_barang}",
+                            'nama_barang' => $d->barang ? $d->barang->nama_barang : "Barang #{$d->id_barang}",
+                            'satuan' => $d->satuan ? $d->satuan->nama_satuan : ($d->barang?->satuan?->nama_satuan ?? '-'),
+                            'jumlah' => (float) $d->jumlah,
+                            'asal_stok' => ($d->asal_stok === 'P' || $d->asal_stok === 'Stok Project') ? 'Stok Project' : (($d->asal_stok === 'U' || $d->asal_stok === 'Stok Umum') ? 'Stok Umum' : (($d->asal_stok === 'K' || $d->asal_stok === 'Stok Konsinyasi') ? 'Stok Konsinyasi' : ($d->asal_stok ?: 'Stok Project'))),
+                            'no_iki' => $d->project ? $d->project->kd_project : ($d->header?->project?->kd_project ?? '-'),
+                            'heat_no' => $d->heat_no ?? '-',
+                            'keterangan' => $d->keterangan ?? '-',
+                        ];
+                    }),
+                    'total_kuantitas' => (float) $trx->details->sum('jumlah'),
+                    'total_items' => $trx->details->count(),
+                ]
+            ]);
+        }
+
+        return redirect()->route('transaksi.barang-keluar', ['tab' => 'list']);
+    }
+
+    /**
+     * Hapus / Batalkan Transaksi Bukti Barang Keluar.
+     */
+    public function destroyBarangKeluar(Request $request, $id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $trx = GdBonKeluarM::findOrFail($id);
+            $noTrans = $trx->no_transaksi;
+
+            // Hapus detail terlebih dahulu
+            GdBonKeluarD::where('id_transaksi', $id)->delete();
+
+            // Hapus header
+            $trx->delete();
+
+            DB::commit();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Bukti Barang Keluar [{$noTrans}] berhasil dihapus dari Oracle Database.",
+                ]);
+            }
+
+            return redirect()->route('transaksi.barang-keluar')
+                ->with('success', "Bukti Barang Keluar [{$noTrans}] berhasil dibatalkan dan dihapus.");
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal hapus bukti barang keluar: " . $e->getMessage());
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menghapus transaksi: ' . $e->getMessage(),
+                ], 500);
+            }
+
+            return back()->with('error', 'Gagal menghapus transaksi: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Cetak Lembar Bukti Barang Keluar (Format Standar Operasional Gudang).
+     */
+    public function cetakBarangKeluar($id)
+    {
+        $trx = GdBonKeluarM::with(['project', 'details.barang', 'details.satuan', 'details.project'])
+            ->findOrFail($id);
+
+        return view('transaksi.cetak_bon_keluar', compact('trx'));
     }
 }

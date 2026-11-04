@@ -162,7 +162,7 @@
             <i class="bi bi-calendar3"></i>
             <span>{{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
         </div>
-        <h1>Selamat Datang di Sistem Gudang Enterprise</h1>
+        <h1>Selamat Datang di Sistem Gudang PT Usaha Bakti Perkasa</h1>
         <p>Sistem manajemen logistik pergudangan terpadu dengan Oracle Database 11g. Kelola penerimaan faktur pembelian, pengeluaran barang, serta katalog master data secara cepat dan akurat.</p>
     </div>
     <a href="{{ route('transaksi.faktur-pembelian') }}" class="welcome-action-btn">

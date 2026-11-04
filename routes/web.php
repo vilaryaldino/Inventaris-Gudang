@@ -19,6 +19,7 @@ Route::prefix('master')->name('master.')->group(function () {
 
 // Transaksi
 Route::prefix('transaksi')->name('transaksi.')->group(function () {
+    // Faktur Pembelian (Penerimaan Barang)
     Route::get('/faktur-pembelian', [TransaksiController::class, 'fakturPembelian'])->name('faktur-pembelian');
     Route::post('/faktur-pembelian', [TransaksiController::class, 'storeFakturPembelian'])->name('faktur-pembelian.store');
     Route::get('/faktur-pembelian/po-by-rekanan/{id_rekanan}', [TransaksiController::class, 'getPoByRekanan'])->name('faktur-pembelian.po-by-rekanan');
@@ -27,7 +28,13 @@ Route::prefix('transaksi')->name('transaksi.')->group(function () {
     Route::get('/faktur-pembelian/{id}/cetak', [TransaksiController::class, 'cetakFakturPembelian'])->name('faktur-pembelian.cetak');
     Route::delete('/faktur-pembelian/{id}', [TransaksiController::class, 'destroyFakturPembelian'])->name('faktur-pembelian.destroy');
 
+    // Bukti Barang Keluar (Bon Keluar)
     Route::get('/barang-keluar', [TransaksiController::class, 'barangKeluar'])->name('barang-keluar');
+    Route::post('/barang-keluar', [TransaksiController::class, 'storeBarangKeluar'])->name('barang-keluar.store');
+    Route::get('/barang-keluar/api/projects', [TransaksiController::class, 'searchProjects'])->name('barang-keluar.projects');
+    Route::get('/barang-keluar/{id}', [TransaksiController::class, 'showBarangKeluar'])->name('barang-keluar.show');
+    Route::get('/barang-keluar/{id}/cetak', [TransaksiController::class, 'cetakBarangKeluar'])->name('barang-keluar.cetak');
+    Route::delete('/barang-keluar/{id}', [TransaksiController::class, 'destroyBarangKeluar'])->name('barang-keluar.destroy');
 });
 
 // Laporan (Placeholder for now)

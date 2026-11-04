@@ -229,9 +229,9 @@
     <div class="invoice-box">
         <div class="header">
             <div class="company-info">
-                <h1>PT. LOGISTIK WAREHOUSE INDONESIA</h1>
-                <p>Kawasan Industri Terpadu Blok D-12, Cikarang, Jawa Barat<br>
-                Telp: (021) 8983-4000 | Email: warehouse@logistik-indonesia.co.id</p>
+                <h1>PT USAHA BAKTI PERKASA</h1>
+                <p>Divisi Gudang &amp; Logistik Material<br>
+                Sistem Manajemen Pergudangan Enterprise Terpadu</p>
             </div>
             <div class="invoice-title">
                 <h2>Bukti Penerimaan Barang</h2>
