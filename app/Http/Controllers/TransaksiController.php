@@ -73,10 +73,8 @@ class TransaksiController extends Controller
         $totalQtyBarang = (float) GdTerimaBeliD::where('is_stok', 'Y')->sum('jumlah');
         $totalNilaiFaktur = (float) GdTerimaBeliD::sum('total');
 
-        // 4. Data Master & Simulasi Purchase Order untuk Formulir Input
+        // 4. Data Master Rekanan & Purchase Order untuk Formulir Input (Item ditarik eksklusif dari PO)
         $rekanans = MRekanan::orderBy('nama_rekanan')->get();
-        $items = MItem::with(['satuan.satuanDasar'])->orderBy('kode_barang')->get();
-        $satuans = MSatuan::orderBy('kode_satuan')->get();
 
         // Ambil daftar Purchase Order yang memiliki item barang di pmb_purchorder_d
         $poList = PmbPurchorderM::with(['rekanan'])
@@ -102,8 +100,6 @@ class TransaksiController extends Controller
             'totalQtyBarang',
             'totalNilaiFaktur',
             'rekanans',
-            'items',
-            'satuans',
             'poList',
             'noTransaksiPreview',
             'tglTransaksi',
@@ -233,16 +229,16 @@ class TransaksiController extends Controller
             'keterangan' => 'nullable|string|max:255',
             'items' => 'required|array|min:1',
             'items.*.id_po_detail' => 'required|integer',
-            'items.*.jumlah' => 'required|numeric|min:0.0001',
+            'items.*.jumlah' => 'required|numeric|min:0',
         ], [
             'id_rekanan.required' => 'Rekanan / Pemasok wajib dipilih terlebih dahulu.',
             'id_rekanan.exists' => 'Data rekanan tidak valid di database.',
             'id_po.required' => 'Nomor Purchase Order (PO) wajib dipilih.',
             'items.required' => 'Daftar barang penerimaan PO tidak boleh kosong.',
-            'items.min' => 'Faktur harus berisi minimal 1 item barang yang diterima.',
+            'items.min' => 'Faktur harus berisi minimal 1 item barang yang diterima dari PO.',
             'items.*.id_po_detail.required' => 'Referensi item PO tidak valid.',
             'items.*.jumlah.required' => 'Kuantitas barang yang diterima wajib diisi.',
-            'items.*.jumlah.min' => 'Kuantitas barang yang diterima harus lebih besar dari 0.',
+            'items.*.jumlah.min' => 'Kuantitas barang yang diterima tidak boleh bernilai negatif.',
         ]);
 
         try {
@@ -261,6 +257,7 @@ class TransaksiController extends Controller
             }
 
             $poDetailsMap = $po->details->keyBy('id_detail');
+            $totalQtyDiterima = 0;
 
             // 3. Validasi Integritas Bisnis: Pastikan SEMUA item yang dikirim berasal dari PO ini!
             foreach ($request->items as $idx => $itemData) {
@@ -270,7 +267,7 @@ class TransaksiController extends Controller
                     DB::rollBack();
                     return response()->json([
                         'success' => false,
-                        'message' => "Pelanggaran Aturan Bisnis: Baris ke-" . ($idx + 1) . " (Detail ID: {$poDetailId}) bukan bagian dari Purchase Order [{$po->no_transaksi}]. Penambahan barang di luar PO dilarang!",
+                        'message' => "Pelanggaran Aturan Bisnis: Baris ke-" . ($idx + 1) . " (Detail ID: {$poDetailId}) bukan bagian dari Purchase Order [{$po->no_transaksi}]. Penambahan barang di luar PO dilarang keras!",
                     ], 422);
                 }
 
@@ -282,9 +279,19 @@ class TransaksiController extends Controller
                     DB::rollBack();
                     return response()->json([
                         'success' => false,
-                        'message' => "Kuantitas diterima ({$qtyDiterima}) pada baris ke-" . ($idx + 1) . " melebihi pesanan PO ({$qtyMaksimal}). Penerimaan tidak boleh melebihi kuantitas PO!",
+                        'message' => "Kuantitas diterima ({$qtyDiterima}) pada item [{$poDetail->barang?->nama_barang}] melebihi pesanan PO ({$qtyMaksimal}). Penerimaan tidak boleh melebihi kuantitas PO!",
                     ], 422);
                 }
+
+                $totalQtyDiterima += $qtyDiterima;
+            }
+
+            if ($totalQtyDiterima <= 0) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Minimal harus ada 1 item barang dalam PO dengan kuantitas diterima lebih besar dari 0.',
+                ], 422);
             }
 
             // 4. Ambil Sequence ID untuk Header dari Oracle SEQ_GD_TERIMA_M
@@ -340,8 +347,12 @@ class TransaksiController extends Controller
             // 8. Simpan Detail Barang (gd_terima_beli_d)
             $noUrut = 1;
             foreach ($request->items as $itemData) {
-                $poDetail = $poDetailsMap->get((int) $itemData['id_po_detail']);
                 $jumlah = (float) $itemData['jumlah'];
+                if ($jumlah <= 0) {
+                    continue; // Lewati item PO yang kuantitas penerimaannya 0 (belum tiba / sisa)
+                }
+
+                $poDetail = $poDetailsMap->get((int) $itemData['id_po_detail']);
 
                 // Harga dikunci server-side dari PO asli demi keamanan finansial
                 $hargaSatuan = (float) $poDetail->harga;
@@ -392,14 +403,18 @@ class TransaksiController extends Controller
             DB::rollBack();
             Log::error("Gagal simpan faktur pembelian: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
+            $userMessage = config('app.debug')
+                ? 'Terjadi kesalahan sistem saat menyimpan transaksi: ' . $e->getMessage()
+                : 'Terjadi kendala internal saat menyimpan transaksi ke database. Silakan periksa kembali data Anda atau hubungi administrator.';
+
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Terjadi kesalahan sistem saat menyimpan transaksi: ' . $e->getMessage(),
+                    'message' => $userMessage,
                 ], 500);
             }
 
-            return back()->withInput()->with('error', 'Gagal menyimpan transaksi: ' . $e->getMessage());
+            return back()->withInput()->with('error', $userMessage);
         }
     }
 
@@ -499,14 +514,18 @@ class TransaksiController extends Controller
             DB::rollBack();
             Log::error("Gagal hapus faktur pembelian: " . $e->getMessage());
 
+            $userMessage = config('app.debug')
+                ? 'Gagal menghapus transaksi: ' . $e->getMessage()
+                : 'Terjadi kendala internal saat menghapus transaksi dari database.';
+
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal menghapus transaksi: ' . $e->getMessage(),
+                    'message' => $userMessage,
                 ], 500);
             }
 
-            return back()->with('error', 'Gagal menghapus transaksi: ' . $e->getMessage());
+            return back()->with('error', $userMessage);
         }
     }
 
@@ -756,14 +775,18 @@ class TransaksiController extends Controller
             DB::rollBack();
             Log::error("Gagal menyimpan Bukti Barang Keluar: " . $e->getMessage());
 
+            $userMessage = config('app.debug')
+                ? 'Gagal menyimpan transaksi ke Oracle Database: ' . $e->getMessage()
+                : 'Terjadi kendala internal saat menyimpan transaksi barang keluar ke database.';
+
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal menyimpan transaksi ke Oracle Database: ' . $e->getMessage(),
+                    'message' => $userMessage,
                 ], 500);
             }
 
-            return back()->withInput()->with('error', 'Gagal menyimpan transaksi: ' . $e->getMessage());
+            return back()->withInput()->with('error', $userMessage);
         }
     }
 
@@ -848,14 +871,18 @@ class TransaksiController extends Controller
             DB::rollBack();
             Log::error("Gagal hapus bukti barang keluar: " . $e->getMessage());
 
+            $userMessage = config('app.debug')
+                ? 'Gagal menghapus transaksi: ' . $e->getMessage()
+                : 'Terjadi kendala internal saat menghapus transaksi barang keluar dari database.';
+
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal menghapus transaksi: ' . $e->getMessage(),
+                    'message' => $userMessage,
                 ], 500);
             }
 
-            return back()->with('error', 'Gagal menghapus transaksi: ' . $e->getMessage());
+            return back()->with('error', $userMessage);
         }
     }
 

@@ -900,9 +900,14 @@
 
         <!-- CARD 2: DETAIL BARANG (TERIKAT KE PO) -->
         <div class="card-panel">
-            <div class="card-panel-header">
+            <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <span><i class="bi bi-boxes text-primary"></i> Detail Barang yang Diterima (<code>GD_TERIMA_BELI_D</code>)</span>
-                <span class="badge-status info">Sequence: SEQ_GD_TERIMA_D</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="badge-status warning" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-weight: 700; padding: 4px 10px; border-radius: 6px; font-size: 11.5px;">
+                        <i class="bi bi-lock-fill"></i> Terkunci Sesuai PO • Tambah Item Baru Dinonaktifkan
+                    </span>
+                    <span class="badge-status info">Sequence: SEQ_GD_TERIMA_D</span>
+                </div>
             </div>
             <div class="card-panel-body">
                 
@@ -937,8 +942,11 @@
                                 <th style="width: 140px;">Kode Barang</th>
                                 <th>Nama Barang</th>
                                 <th style="width: 120px; text-align: center;">Satuan</th>
-                                <th style="width: 120px; text-align: right;">Qty PO</th>
-                                <th style="width: 160px; text-align: right;">Qty Diterima <span class="required">*</span></th>
+                                <th style="width: 130px; text-align: right;">Qty PO (Maksimal)</th>
+                                <th style="width: 180px; text-align: right;">
+                                    Qty Diterima <span class="required">*</span>
+                                    <div style="font-size: 10px; font-weight: 600; color: #2563eb; text-transform: none;">(Hanya Kolom Ini Yg Bisa Diedit)</div>
+                                </th>
                                 <th style="width: 140px; text-align: center;">Status Verifikasi</th>
                             </tr>
                         </thead>
@@ -1353,18 +1361,18 @@
                     <td style="text-align: right;">
                         <input type="number" 
                                step="0.01" 
-                               min="0.01" 
+                               min="0" 
                                max="${item.qty_po}" 
                                class="form-control item-qty" 
-                               style="padding: 6px 10px; text-align: right; font-weight: 700; color: #1e40af; border-color: #93c5fd; background: #f0fdf4;" 
+                               style="padding: 6px 12px; text-align: right; font-weight: 800; color: #1e40af; border: 2px solid #3b82f6; background: #ffffff; border-radius: 8px;" 
                                value="${defaultQty}" 
-                               title="Kuantitas yang diterima di gudang (Maks PO: ${item.qty_po})"
+                               title="Hanya kolom kuantitas ini yang dapat Anda revisi (Maks PO: ${item.qty_po})"
                                oninput="validasiQtyBaris(this)">
-                        <small style="font-size: 10.5px; color: #64748b; display: block; margin-top: 2px;">Maks PO: ${item.qty_po}</small>
+                        <small style="font-size: 10.5px; color: #64748b; display: block; margin-top: 2px;">Maks PO: <strong>${item.qty_po}</strong></small>
                     </td>
                     <td style="text-align: center;">
-                        <span class="badge-status success" title="Item resmi terverifikasi dari PO">
-                            <i class="bi bi-check-circle-fill"></i> Terverifikasi PO
+                        <span class="badge-status success" title="Item resmi terverifikasi dari Purchase Order">
+                            <i class="bi bi-shield-check"></i> Dari PO Resmi
                         </span>
                     </td>
                 `;
@@ -1390,23 +1398,26 @@
         });
     }
 
-    // Hitung & Validasi Qty per baris
+    // Hitung & Validasi Qty per baris (Hanya boleh merevisi Qty, maksimal sesuai Qty PO)
     function validasiQtyBaris(inputElem) {
-        const qty = parseFloat(inputElem.value) || 0;
+        const qty = parseFloat(inputElem.value);
         const maxQty = parseFloat(inputElem.getAttribute('max')) || 0;
 
-        if (maxQty > 0 && qty > maxQty) {
+        if (isNaN(qty) || qty < 0) {
+            inputElem.value = 0;
+            inputElem.style.borderColor = '#ef4444';
+        } else if (maxQty > 0 && qty > maxQty) {
             inputElem.style.borderColor = '#ef4444';
             inputElem.style.background = '#fef2f2';
             inputElem.style.color = '#b91c1c';
             alert(`⚠️ Peringatan: Kuantitas diterima (${qty}) melebihi kuantitas pesanan PO (${maxQty}). Kuantitas telah dikembalikan ke batas maksimum PO.`);
             inputElem.value = maxQty;
-            inputElem.style.borderColor = '#93c5fd';
-            inputElem.style.background = '#f0fdf4';
+            inputElem.style.borderColor = '#3b82f6';
+            inputElem.style.background = '#ffffff';
             inputElem.style.color = '#1e40af';
         } else {
-            inputElem.style.borderColor = '#93c5fd';
-            inputElem.style.background = '#f0fdf4';
+            inputElem.style.borderColor = '#3b82f6';
+            inputElem.style.background = '#ffffff';
             inputElem.style.color = '#1e40af';
         }
 
@@ -1461,6 +1472,8 @@
         const items = [];
         let valid = true;
 
+        let totalQtyDiterima = 0;
+
         rows.forEach((row, idx) => {
             const idPoDetail = row.querySelector('.item-id-po-detail').value;
             const idBarang = row.querySelector('.item-id-barang').value;
@@ -1468,8 +1481,8 @@
             const jumlah = parseFloat(row.querySelector('.item-qty').value) || 0;
             const maxQty = parseFloat(row.querySelector('.item-qty').getAttribute('max')) || 0;
 
-            if (jumlah <= 0) {
-                alert(`Baris ke-${idx + 1}: Kuantitas barang yang diterima harus lebih besar dari 0.`);
+            if (jumlah < 0) {
+                alert(`Baris ke-${idx + 1}: Kuantitas barang yang diterima tidak boleh bernilai negatif.`);
                 valid = false;
                 return;
             }
@@ -1480,6 +1493,8 @@
                 return;
             }
 
+            totalQtyDiterima += jumlah;
+
             items.push({
                 id_po_detail: idPoDetail,
                 id_barang: idBarang,
@@ -1489,6 +1504,11 @@
         });
 
         if (!valid) return;
+
+        if (totalQtyDiterima <= 0) {
+            alert('⚠️ Minimal harus ada 1 item barang dalam PO dengan kuantitas diterima lebih besar dari 0.');
+            return;
+        }
 
         const payload = {
             _token: '{{ csrf_token() }}',
