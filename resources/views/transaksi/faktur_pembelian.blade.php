@@ -452,6 +452,29 @@
         border-color: #fecaca;
     }
 
+    .btn-hapus-item {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        padding: 5px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 6px;
+        border: 1px solid #fecaca;
+        background: #fef2f2;
+        color: #dc2626;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+    }
+    .btn-hapus-item:hover {
+        background: #ef4444;
+        color: #ffffff;
+        border-color: #dc2626;
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+    }
+
     /* Modal Backdrop & Dialog */
     .modal-backdrop-custom {
         position: fixed;
@@ -903,6 +926,9 @@
             <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <span><i class="bi bi-boxes text-primary"></i> Detail Barang yang Diterima (<code>GD_TERIMA_BELI_D</code>)</span>
                 <div style="display: flex; align-items: center; gap: 8px;">
+                    <button type="button" id="btnResetItemPO" class="btn-custom btn-secondary-custom" style="padding: 4px 12px; font-size: 11.5px; height: 30px; display: none; align-items: center; gap: 5px;" onclick="muatUlangPO()" title="Muat ulang seluruh item asli dari PO jika ada barang yang tidak sengaja terhapus">
+                        <i class="bi bi-arrow-repeat"></i> Muat Ulang Item PO
+                    </button>
                     <span class="badge-status warning" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-weight: 700; padding: 4px 10px; border-radius: 6px; font-size: 11.5px;">
                         <i class="bi bi-lock-fill"></i> Terkunci Sesuai PO • Tambah Item Baru Dinonaktifkan
                     </span>
@@ -938,21 +964,22 @@
                     <table class="data-table" id="tableBarang">
                         <thead>
                             <tr>
-                                <th style="width: 50px; text-align: center;">No</th>
-                                <th style="width: 140px;">Kode Barang</th>
+                                <th style="width: 45px; text-align: center;">No</th>
+                                <th style="width: 120px;">Kode Barang</th>
                                 <th>Nama Barang</th>
-                                <th style="width: 120px; text-align: center;">Satuan</th>
-                                <th style="width: 130px; text-align: right;">Qty PO (Maksimal)</th>
-                                <th style="width: 180px; text-align: right;">
+                                <th style="width: 90px; text-align: center;">Satuan</th>
+                                <th style="width: 110px; text-align: right;">Qty PO (Maksimal)</th>
+                                <th style="width: 150px; text-align: right;">
                                     Qty Diterima <span class="required">*</span>
-                                    <div style="font-size: 10px; font-weight: 600; color: #2563eb; text-transform: none;">(Hanya Kolom Ini Yg Bisa Diedit)</div>
+                                    <div style="font-size: 10px; font-weight: 600; color: #2563eb; text-transform: none;">(Sesuaikan Dgn Fisik)</div>
                                 </th>
-                                <th style="width: 140px; text-align: center;">Status Verifikasi</th>
+                                <th style="width: 130px; text-align: center;">Status Verifikasi</th>
+                                <th style="width: 90px; text-align: center;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyBarang">
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 40px 20px; color: #94a3b8;">
+                                <td colspan="8" style="text-align: center; padding: 40px 20px; color: #94a3b8;">
                                     <i class="bi bi-building-gear" style="font-size: 36px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
                                     <strong style="color: #64748b;">Silakan pilih Rekanan terlebih dahulu.</strong>
                                     <div style="font-size: 12px; margin-top: 4px;">Sebelum memilih PO dan memuat barang, tentukan rekanan/vendor terkait di atas.</div>
@@ -963,6 +990,7 @@
                             <tr style="background: #f8fafc; font-weight: 800; font-size: 14px; border-top: 2px solid #cbd5e1;">
                                 <td colspan="5" style="text-align: right; color: #475569;">TOTAL KUANTITAS DITERIMA:</td>
                                 <td style="text-align: right; color: #2563eb;" id="grandTotalQty">0.00</td>
+                                <td style="text-align: center;"></td>
                                 <td style="text-align: center;"></td>
                             </tr>
                         </tfoot>
@@ -1128,6 +1156,9 @@
             document.getElementById('badgeDetailRekanan').innerText = 'Data kontak & alamat rekanan akan tampil di sini';
             if (badgePoLocked) badgePoLocked.style.display = 'none';
 
+            const btnResetItemPO = document.getElementById('btnResetItemPO');
+            if (btnResetItemPO) btnResetItemPO.style.display = 'none';
+
             // Reset banner status ke default info
             alertInfo.style.backgroundColor = '#eff6ff';
             alertInfo.style.borderColor = '#bfdbfe';
@@ -1141,7 +1172,7 @@
             // Reset table
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 40px 20px; color: #94a3b8;">
+                    <td colspan="8" style="text-align: center; padding: 40px 20px; color: #94a3b8;">
                         <i class="bi bi-building-gear" style="font-size: 36px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
                         <strong style="color: #64748b;">Silakan pilih Rekanan terlebih dahulu.</strong>
                         <div style="font-size: 12px; margin-top: 4px;">Sebelum memilih PO dan memuat barang, tentukan rekanan/vendor terkait di atas.</div>
@@ -1200,6 +1231,8 @@
                 poHelp.innerHTML = '<span style="color: #dc2626; font-weight: 600;"><i class="bi bi-x-circle-fill"></i> Tidak ada PO untuk rekanan ini. Penerimaan barang tidak dapat dilakukan.</span>';
 
                 if (badgePoLocked) badgePoLocked.style.display = 'none';
+                const btnResetItemPO = document.getElementById('btnResetItemPO');
+                if (btnResetItemPO) btnResetItemPO.style.display = 'none';
 
                 // Ubah banner menjadi DANGER/WARNING
                 alertInfo.style.backgroundColor = '#fef2f2';
@@ -1214,7 +1247,7 @@
                 // Tampilan tabel ditolak / diblokir
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; padding: 48px 20px; background: #fffaf0;">
+                        <td colspan="8" style="text-align: center; padding: 48px 20px; background: #fffaf0;">
                             <i class="bi bi-slash-circle" style="font-size: 38px; display: block; margin-bottom: 8px; color: #ef4444;"></i>
                             <strong style="color: #991b1b; font-size: 15px;">Penerimaan Barang Ditolak</strong>
                             <div style="font-size: 12.5px; margin-top: 5px; color: #b91c1c; max-width: 540px; margin-left: auto; margin-right: auto; line-height: 1.5;">
@@ -1259,7 +1292,7 @@
 
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="9" style="text-align: center; padding: 40px 20px; color: #2563eb;">
+                        <td colspan="8" style="text-align: center; padding: 40px 20px; color: #2563eb;">
                             <i class="bi bi-receipt" style="font-size: 32px; display: block; margin-bottom: 8px; color: #93c5fd;"></i>
                             <strong style="color: #1e40af; font-size: 14px;">Silakan pilih salah satu Nomor PO di atas.</strong>
                             <div style="font-size: 12px; margin-top: 4px; color: #64748b;">Rincian barang akan ditarik secara otomatis dari database Oracle sesuai PO yang dipilih.</div>
@@ -1298,7 +1331,7 @@
 
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" style="text-align: center; padding: 36px 20px; color: #2563eb;">
+                <td colspan="8" style="text-align: center; padding: 36px 20px; color: #2563eb;">
                     <div style="font-size: 20px; margin-bottom: 8px;"><i class="bi bi-arrow-repeat spin"></i></div>
                     <strong>Menghubungkan ke Oracle DB & Menarik Rincian Barang PO...</strong>
                 </td>
@@ -1329,9 +1362,12 @@
             alertIconWrap.style.color = '#16a34a';
             alertIcon.className = 'bi bi-check-circle-fill text-success';
             statusTitle.innerHTML = `PO Terpilih: <strong style="color: #16a34a;">${data.no_transaksi}</strong> (Tgl PO: ${data.tgl_transaksi})`;
-            statusDesc.innerHTML = `Item barang ditarik otomatis dari Purchase Order. <strong>Item baru di luar PO tidak dapat ditambah</strong>. Anda hanya diizinkan untuk menyesuaikan kuantitas (Qty) yang diterima.`;
+            statusDesc.innerHTML = `Item barang ditarik otomatis dari PO. <strong>Hapus baris barang (tombol merah)</strong> jika tidak tercantum di Surat Jalan saat ini, dan sesuaikan kuantitas (Qty) dengan fisik barang yang tiba.`;
             badgeSummaryWrap.style.display = 'block';
             badgeSummary.innerText = `${data.total_items} Item Terdaftar di PO`;
+
+            const btnResetItemPO = document.getElementById('btnResetItemPO');
+            if (btnResetItemPO) btnResetItemPO.style.display = 'inline-flex';
 
             // Render Detail Barang Persis dari PO
             tbody.innerHTML = '';
@@ -1366,7 +1402,7 @@
                                class="form-control item-qty" 
                                style="padding: 6px 12px; text-align: right; font-weight: 800; color: #1e40af; border: 2px solid #3b82f6; background: #ffffff; border-radius: 8px;" 
                                value="${defaultQty}" 
-                               title="Hanya kolom kuantitas ini yang dapat Anda revisi (Maks PO: ${item.qty_po})"
+                               title="Sesuaikan dengan jumlah fisik barang yang tercantum pada Surat Jalan" 
                                oninput="validasiQtyBaris(this)">
                         <small style="font-size: 10.5px; color: #64748b; display: block; margin-top: 2px;">Maks PO: <strong>${item.qty_po}</strong></small>
                     </td>
@@ -1374,6 +1410,14 @@
                         <span class="badge-status success" title="Item resmi terverifikasi dari Purchase Order">
                             <i class="bi bi-shield-check"></i> Dari PO Resmi
                         </span>
+                    </td>
+                    <td style="text-align: center;">
+                        <button type="button" 
+                                class="btn-hapus-item" 
+                                onclick="hapusBarisItem(this)" 
+                                title="Hapus baris barang ini jika tidak tercantum di Surat Jalan saat ini">
+                            <i class="bi bi-trash-fill"></i> Hapus
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1390,7 +1434,7 @@
         .catch(err => {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 24px; color: #ef4444;">
+                    <td colspan="8" style="text-align: center; padding: 24px; color: #ef4444;">
                         <i class="bi bi-exclamation-triangle-fill"></i> Gagal terhubung ke database Oracle: ${err.message}
                     </td>
                 </tr>
@@ -1438,11 +1482,84 @@
         if (qtyElem) qtyElem.innerText = totalQty.toFixed(2);
     }
 
+    // Hapus Baris Item Barang (Jika barang tidak tercantum pada Surat Jalan saat ini)
+    function hapusBarisItem(btn) {
+        const row = btn.closest('tr.item-row');
+        if (!row) return;
+
+        const namaBarang = row.querySelector('strong')?.innerText || 'item ini';
+        
+        if (confirm(`Hapus [${namaBarang}] dari daftar penerimaan saat ini?\n\nCatatan: Gunakan ini jika barang tersebut tidak ada pada Surat Jalan (belum dikirim/diterima).`)) {
+            row.remove();
+            renumberTableRows();
+            hitungGrandTotal();
+            updateItemCountBadge();
+        }
+    }
+
+    // Perbarui Nomor Urut Baris setelah ada item yang dihapus
+    function renumberTableRows() {
+        const rows = document.querySelectorAll('#tbodyBarang tr.item-row');
+        rows.forEach((row, idx) => {
+            const noCell = row.cells[0];
+            if (noCell) noCell.innerText = idx + 1;
+        });
+
+        const btnResetItemPO = document.getElementById('btnResetItemPO');
+        if (btnResetItemPO) {
+            btnResetItemPO.style.display = 'inline-flex';
+        }
+
+        if (rows.length === 0) {
+            const tbody = document.getElementById('tbodyBarang');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 40px 20px; color: #64748b; background: #fffaf0;">
+                        <i class="bi bi-trash" style="font-size: 36px; display: block; margin-bottom: 8px; color: #f59e0b;"></i>
+                        <strong style="color: #92400e; font-size: 14px;">Semua item telah dihapus dari formulir penerimaan.</strong>
+                        <div style="font-size: 12px; margin-top: 4px; color: #b45309;">Tidak ada barang yang akan disimpan ke database Oracle.</div>
+                        <button type="button" class="btn-custom btn-secondary-custom" style="margin-top: 14px; padding: 6px 16px; font-size: 12.5px; border-color: #cbd5e1;" onclick="muatUlangPO()">
+                            <i class="bi bi-arrow-repeat"></i> Muat Ulang Item PO
+                        </button>
+                    </td>
+                </tr>
+            `;
+            const submitBtn = document.getElementById('btnSubmitFaktur');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                submitBtn.style.cursor = 'not-allowed';
+            }
+        }
+    }
+
+    // Perbarui Badge Total Item di Header
+    function updateItemCountBadge() {
+        const rows = document.querySelectorAll('#tbodyBarang tr.item-row');
+        const badgeSummary = document.getElementById('poBadgeSummary');
+        if (badgeSummary) {
+            badgeSummary.innerText = `${rows.length} Item Siap Diterima`;
+        }
+    }
+
+    // Muat Ulang Seluruh Item Asli dari PO
+    function muatUlangPO() {
+        const selectPO = document.getElementById('selectPO');
+        const idPo = selectPO ? selectPO.value : null;
+        if (!idPo) {
+            alert('Silakan pilih Purchase Order (PO) terlebih dahulu.');
+            return;
+        }
+        muatDataPO(idPo);
+    }
+
     // Reset Form & Kembalikan ke State Awal
     function resetFormFaktur() {
         if (confirm('Bersihkan seluruh isian formulir penerimaan?')) {
             document.getElementById('selectRekanan').value = '';
             document.getElementById('keteranganTransaksi').value = '';
+            const btnResetItemPO = document.getElementById('btnResetItemPO');
+            if (btnResetItemPO) btnResetItemPO.style.display = 'none';
             onRekananChange('');
         }
     }
